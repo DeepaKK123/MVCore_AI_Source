@@ -1,0 +1,84 @@
+ORDER DICT FILE LAYOUT
+=================
+File: ORDER
+Dictionary: ORDER
+
+@ID............ TYP LOC.......... CONV NAME........... FORMAT SM ASSOC.....
+ 
+LINE_ITEMS      PH  PRODUCT_NO PR
+                    OD_NAME FEATU
+                    RES COLOR QTY
+                     PRICE EPRICE
+PHONE_ITEMS     PH  PHONE PHONE_T
+                    YPE
+@ORIGINAL       SQ            @ID
+@SYNONYM        SQ             ID
+ADDRESS         V   TRANS('CLIENT      Address         25T    MV
+                    S',CLIENT_NO,
+                    'ADDRESS','X'
+                    )
+CITY            V   TRANS('CLIENT      City            15T    S
+                    S',CLIENT_NO,
+                    'CITY','X')
+COMPANY         V   TRANS('CLIENT      Company         15T    S
+                    S',CLIENT_NO,
+                    'COMPANY','X'
+                    )
+COUNTRY         V   TRANS('CLIENT      Country         10T    S
+                    S',CLIENT_NO,
+                    'COUNTRY','X'
+                    )
+EPRICE          V       PRICE*QTY MD2, Extended Price  12R    MS LINE_ITEMS
+                                  $
+FEATURES        V   TRANS('INVENT      Features        30T    MV LINE_ITEMS
+                    ORY',PRODUCT_
+                    NO,'FEATURES'
+                    ,'X')
+GRAND_TOTAL     V   PRICE*QTY; SU MD2, Grand Total     14R    S
+                    M(SUM(@1))    $
+NAME            V   TRANS('CLIENT      Name            25T    S
+                    S',CLIENT_NO,
+                    'FNAME','X'):
+                     " ": TRANS('
+                    CLIENTS',CLIE
+                    NT_NO,'LNAME'
+                    ,'X')
+PHONE           V   TRANS('CLIENT      Phone Number    20R    MV PHONE_ITEM
+                    S',CLIENT_NO,                                S
+                    'PHONE_NUM','
+                    X'); TRANS('C
+                    LIENTS',CLIEN
+                    T_NO,'COUNTRY
+                    ','X'); SUBR(
+                    "PHONE_FMT",@
+                    1,@2)
+PHONE_TYPE      V   TRANS('CLIENT      Phone Type      10T    MV PHONE_ITEM
+                    S',CLIENT_NO,                                S
+                    'PHONE_TYPE',
+                    'X')
+PROD_NAME       V   TRANS('INVENT      Product Name    10T    MV LINE_ITEMS
+                    ORY',PRODUCT_
+                    NO,'PROD_NAME
+                    ','X')
+STATE           V   TRANS('CLIENT      State           15T    S
+                    S',CLIENT_NO,
+                    'STATE','X')
+ZIP             V   TRANS('CLIENT      Postal Code     10R    S
+                    S',CLIENT_NO,
+                     -1,'X'); SUB
+                    R("PSTLCODE_F
+                    MT",@1)
+NEXT_ORD_NO     X             983      Next Order #
+28 records listed
+ 
+
+
+
+
+
+
+
+
+
+
+:

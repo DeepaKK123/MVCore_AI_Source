@@ -1,0 +1,60 @@
+@ID............ TYP LOC.......... CONV NAME........... FORMAT SM ASSOC.....
+ 
+                    APES ELSE ''
+CUR_BALANCE     I   SUM(TRANS('TA MD2  Currently Owes  8R2    S
+                    PES',TAPES_RE
+                    NTED,RENTAL_P
+                    RICE,'X'))
+DATE_DUE        I   DATE_OUT+REUS D2/  Date Due        8L     MV TAPE_INFO
+                    E(2)
+DAYS_BETWEEN    I   DATE_DUE-DATE                      6R     MV TAPE_INFO
+                    _OUT
+NBR_TAPES       I   IF TAPES_RENT MD0  Nbr Tapes       5R     S
+                    ED = '' THEN
+                    0 ELSE COUNT(
+                    TAPES_RENTED,
+                    @VM) + 1
+TAPE_CAT        I   TRANS('TAPES'      TC              5L     MS TAPE_INFO
+                    ,TAPES_RENTED
+                    ,CATEGORIES,'
+                    X')
+TAPE_COST       I   TRANS('TAPES' MD2  Rental Cost     8R2$   MV TAPE_INFO
+                    ,TAPES_RENTED
+                    ,RENTAL_PRICE
+                    ,'X')
+UP_NAME         I    UPCASE(NAME)      Name            20L    S
+TAPE_INFO       PH  TAPES_RENTED
+                    DATE_OUT DATE
+                    _DUE DAYS_BET
+                    WEEN TAPE_COS
+                    T TAPE_NAME U
+                    P_NAMES TAPE_
+                    CAT
+@ORIGINAL       SQ            @ID
+@SYNONYM        SQ             ID
+ACTIVITY        V   TOTAL(NBR_TAP      % Activity      8R2    S
+                    ES)/TOTAL(NUM
+                    _RENTALS)*100
+AMT_DUE         V   TRANS('TAPES' MD2  Amt Due         8R2$   MV TAPE_INFO
+                    ,TAPES_RENTED
+                    ,RENTAL_PRICE
+                    ,'X');@1 + @1
+                    *REUSE(.035)
+TAPE_NAME       V   TRANS(TAPES,T      Video Tape Name 20L    MV TAPE_INFO
+                    APES_RENTED,'
+                    NAME','X')
+UP_NAMES        V   SUBR('UP_NAME      Tape Name       15L    MV TAPE_INFO
+                    ',TAPE_NAME)
+@CF             x               1      CUST.XREF
+29 records listed
+ 
+
+
+
+
+
+
+
+
+
+:
