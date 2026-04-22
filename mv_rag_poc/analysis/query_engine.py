@@ -7,7 +7,9 @@ import difflib
 import json
 import os
 import re
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from langchain_ollama import OllamaLLM as Ollama
 from langchain_ollama import OllamaEmbeddings
@@ -19,6 +21,7 @@ from analysis.prompts import (
     SUBROUTINE_PROMPT,
     DICT_PROMPT,
     CODE_SUGGESTION_PROMPT,
+    IMPACT_ANALYSIS_PROMPT,
     get_quick_reply,
 )
 from config import (
@@ -186,6 +189,47 @@ JIRA_KEYWORDS = [
 ]
 
 JIRA_TICKET_PATTERN = re.compile(r'\b[A-Z]{1,10}-\d+\b')
+MV_DOT_PATTERN      = re.compile(r'\b([A-Z][A-Z0-9]*(?:\.[A-Z0-9]+){1,})\b')
+UPPER_WORD_PATTERN  = re.compile(r'\b([A-Z]{3,})\b')
+
+# Directive patterns developers add to Jira comments / descriptions, e.g.
+#   "Program need to be modified: UPDATE.ORDER"
+#   "Program to modify - ORD.PROCESS"
+#   "File: CUSTOMER.LOOKUP"
+#   "Subroutine to update: GET.ORDER.DETAILS"
+# Captures the name token that follows the colon / dash.
+DIRECTIVE_PATTERNS = [
+    re.compile(
+        r'(?:PROGRAM|FILE|SUBROUTINE|ROUTINE|MODULE|FUNCTION)'
+        r'(?:\s+(?:NAME|TO|THAT|WHICH|NEED(?:S|ED)?|HAS|HAVE|MUST|SHOULD|WILL))*'
+        r'\s*(?:TO\s+BE\s+|NEED(?:S|ED)?\s+TO\s+BE\s+)?'
+        r'(?:MODIFIED|MODIFY|UPDATED|UPDATE|CHANGED|CHANGE|FIXED|FIX|TOUCHED)?'
+        r'\s*[:\-–=]\s*'
+        r'([A-Z][A-Z0-9._]*)',
+        re.IGNORECASE,
+    ),
+]
+
+
+def _extract_directive_name(text: str, known: list[str]) -> str:
+    """
+    Find names declared via explicit directives like
+    'Program to modify: UPDATE.ORDER' in ticket text.
+    Prefers matches against known subroutines; falls back to any MV-shaped token.
+    """
+    if not text:
+        return ""
+    upper = text.upper()
+    known_set = set(known or [])
+    for pat in DIRECTIVE_PATTERNS:
+        for m in pat.finditer(upper):
+            candidate = m.group(1).strip().rstrip('.,;:)')
+            if candidate in known_set:
+                return candidate
+            # Allow MV dot-notation even when not in known set
+            if "." in candidate and MV_DOT_PATTERN.fullmatch(candidate):
+                return candidate
+    return ""
 
 CODE_SUGGESTION_KEYWORDS = [
     # Direct suggestion requests
@@ -199,6 +243,9 @@ CODE_SUGGESTION_KEYWORDS = [
     "fix the code", "fix the bug", "fix the defect", "fix this",
     "how to fix", "how do i fix", "resolve the bug", "resolve the issue",
     "resolve the defect", "resolve the ticket",
+    "to fix task", "to fix the task", "to fix this task",
+    "to fix ticket", "to fix the ticket", "to fix the story",
+    "to fix the bug", "to resolve",
 
     # Implement / build
     "how to implement", "how do i implement",
@@ -214,11 +261,56 @@ CODE_SUGGESTION_KEYWORDS = [
     "what code", "give me the code", "show me the code",
     "defect fix", "patch", "apply the fix",
 
+    # Which-file / which-program questions (asking where to make a change)
+    "which program", "what program", "which file", "what file",
+    "which subroutine", "what subroutine", "which routine", "what routine",
+    "which module", "what module", "where do i change", "where to change",
+    "where do i modify", "where to modify",
+    "needs to be modified", "needs to be changed", "needs modification",
+    "has to be modified", "has to be changed",
+    "needs to change", "need to modify", "need to change",
+    "should be modified", "should be changed",
+    "program to modify", "program to change", "program to fix",
+    "subroutine to modify", "subroutine to change", "subroutine to fix",
+    "file to modify", "file to change", "file to fix",
+
     # Manager-style requests referencing sprint tasks
     "code for the sprint task", "code for the current task",
     "how do i implement the sprint", "code change for the task",
     "develop the sprint task", "implement the sprint task",
 ]
+
+# When a Jira ticket ID appears alongside any of these, treat as code_suggestion
+# instead of a generic ticket detail lookup.
+CODE_CONTEXT_TERMS = (
+    "program", "subroutine", "routine", "module", "file",
+    "modify", "modified", "modification",
+    "change", "changed",
+    "fix", "fixed",
+    "implement", "resolve", "code",
+)
+
+IMPACT_ANALYSIS_KEYWORDS = [
+    # Direct impact-analysis phrasing
+    "impact analysis", "impact analyses", "impact assessment",
+    "analyze the impact", "analyse the impact",
+    "analyze impact", "analyse impact",
+    "what is the impact", "what's the impact", "whats the impact",
+    "what will be the impact", "what would be the impact",
+    "assess the impact", "evaluate the impact",
+    "impact of the change", "impact of changing", "impact of this change",
+    "impact on", "side effect", "side-effect", "side effects",
+    "what breaks", "what will break", "what would break",
+    "what gets affected", "what is affected", "what would be affected",
+    "what is the effect", "what's the effect", "effect of changing",
+    "downstream impact", "upstream impact", "ripple effect",
+    "who is affected", "what is impacted",
+    "blast radius", "risk of changing",
+    # Phrasing that often pairs with a ticket
+    "impact if we change", "impact if we modify",
+    "impact of fixing", "impact of the fix",
+]
+
 
 HISTORY_KEYWORDS = [
     "who changed", "who modified", "who wrote", "who created",
@@ -235,24 +327,37 @@ HISTORY_KEYWORDS = [
 def detect_question_type(question: str, known: list[str] = None) -> str:
     """
     Detect question type. Priority order:
-      1. Code suggestion keywords → 'code_suggestion'
-      2. Jira ticket ID (PROJ-123) + suggestion → 'code_suggestion'
-      3. Confluence keywords → 'confluence'
-      4. Jira ticket ID only → 'jira'
-      5. Jira keywords → 'jira'
-      6. History keywords → 'history'
-      7. Known subroutine name → 'subroutine'
-      8. Dict keywords → 'dict'
-      9. Default → 'subroutine'
+      1. Impact analysis keywords → 'impact_analysis'   (checked FIRST so
+         phrases like "analyze the impact if we change..." do not get routed
+         to code_suggestion by "change" / "fix" substring matches)
+      2. Code suggestion keywords → 'code_suggestion'
+      3. Jira ticket ID (PROJ-123) + suggestion → 'code_suggestion'
+      4. Confluence keywords → 'confluence'
+      5. Jira ticket ID only → 'jira'
+      6. Jira keywords → 'jira'
+      7. History keywords → 'history'
+      8. Known subroutine name → 'subroutine'
+      9. Dict keywords → 'dict'
+     10. Default → 'subroutine'
     """
     q_lower = question.lower()
 
-    # Priority 1: code suggestion / fix / implement request
+    # Priority 1: impact analysis — must run BEFORE code_suggestion
+    if any(kw in q_lower for kw in IMPACT_ANALYSIS_KEYWORDS):
+        return "impact_analysis"
+
+    # Priority 2: code suggestion / fix / implement request
     if any(kw in q_lower for kw in CODE_SUGGESTION_KEYWORDS):
         return "code_suggestion"
 
-    # Priority 2: Jira ticket + no suggestion → pure Jira lookup
-    if JIRA_TICKET_PATTERN.search(question):
+    # Priority 2a: Jira ticket + code-location language ("which program... MVAI-11",
+    # "what subroutine needs to change for PROJ-123") → code_suggestion
+    has_ticket = bool(JIRA_TICKET_PATTERN.search(question))
+    if has_ticket and any(term in q_lower for term in CODE_CONTEXT_TERMS):
+        return "code_suggestion"
+
+    # Priority 2b: Jira ticket + no suggestion → pure Jira lookup
+    if has_ticket:
         return "jira"
 
     # Priority 3: Confluence / documentation keywords
@@ -297,32 +402,74 @@ def extract_name_from_question(question: str, known: list[str] = None) -> str:
     """
     q_upper = question.upper()
 
+    # Strip Jira ticket keys (e.g. "MVAI-11") so the prefix isn't mistaken
+    # for a subroutine name in Strategy 3 below.
+    q_upper_clean = JIRA_TICKET_PATTERN.sub(" ", q_upper)
+
     # Strategy 1: match against actual files on disk (most reliable)
     # Sort by length descending so GET.ORDER.DETAILS matches before ORDER
     for sub in sorted((known or get_known_subroutines()), key=len, reverse=True):
-        if sub in q_upper:
+        if sub in q_upper_clean:
             return sub
 
     # Strategy 2: MV dot-notation regex — handles 2-part and 3-part names
     # Matches: ORD.PROCESS, GET.ORDER.DETAILS, INV.UPDATE etc.
-    dot_matches = re.findall(
-        r'\b([A-Z][A-Z0-9]*(?:\.[A-Z0-9]+){1,})\b',
-        q_upper
-    )
+    dot_matches = MV_DOT_PATTERN.findall(q_upper_clean)
     if dot_matches:
         # Return the longest match (most specific)
         return max(dot_matches, key=len)
 
     # Strategy 3: any uppercase word (min 3 chars), excluding stop words
     stop = {
-        "THE", "AND", "FOR", "DICT", "FILE", "WHAT",
-        "DOES", "EXPLAIN", "LAYOUT", "FIELDS", "STRUCTURE",
-        "HOW", "WHY", "WHO", "WHEN", "ARE", "CAN", "YOU",
+        # Articles / conjunctions / pronouns
+        "THE", "AND", "FOR", "YOU", "CAN", "ARE", "ANY", "ALL", "SOME",
+        "THIS", "THAT", "THESE", "THOSE", "WITH", "FROM", "INTO", "ONTO",
+        "HAVE", "HAS", "HAD", "BEEN", "BEING", "MUST", "SHOULD", "COULD",
+        "WOULD", "MAY", "WILL", "WAS", "WERE",
+        # Question words
+        "HOW", "WHY", "WHO", "WHEN", "WHERE", "WHICH", "WHAT", "DOES", "DID",
+        # Domain nouns that aren't subroutines
+        "DICT", "FILE", "LAYOUT", "FIELDS", "STRUCTURE", "EXPLAIN",
+        # Code-suggestion verbs (reported bug: "SUGGEST" was returned)
+        "SUGGEST", "SUGGESTED", "SUGGESTION", "FIX", "FIXED", "BUG", "BUGS",
+        "TASK", "TASKS", "TICKET", "TICKETS", "STORY", "STORIES", "ISSUE",
+        "CODE", "CHANGE", "CHANGED", "CHANGES", "MODIFY", "MODIFIED",
+        "IMPLEMENT", "IMPLEMENTED", "BUILD", "RESOLVE", "RESOLVED",
+        "PROGRAM", "PROGRAMS", "SUBROUTINE", "SUBROUTINES", "ROUTINE",
+        "ROUTINES", "MODULE", "MODULES", "FUNCTION", "FUNCTIONS",
+        "WRITE", "UPDATE", "UPDATED", "SHOW", "GIVE", "GIVEN",
+        "NEED", "NEEDS", "NEEDED", "MAKE", "MADE", "DEVELOP", "DEVELOPED",
+        "ADD", "ADDED", "ENHANCE", "ENHANCEMENT", "PATCH", "APPLY",
+        # Jira / project management nouns
+        "SPRINT", "SPRINTS", "BACKLOG", "EPIC", "EPICS", "DEFECT",
+        "DEFECTS", "STATUS", "PROJECT", "ASSIGNEE", "REPORTER",
+        "BLOCKED", "BLOCKING", "COMPLETED", "DONE", "OPEN", "CLOSED",
+        # Confluence / docs
+        "PAGE", "PAGES", "DOC", "DOCS", "DOCUMENT", "DOCUMENTATION",
+        "WIKI", "SPEC", "SPECIFICATION", "RUNBOOK", "GUIDE",
+        # GitHub history
+        "COMMIT", "COMMITS", "AUTHOR", "CONTRIBUTOR", "CONTRIBUTORS",
+        "HISTORY", "RECENT", "LATEST",
+        # Misc common English
+        "ABOUT", "ALSO", "ONLY", "JUST", "MORE", "LESS", "THAN", "THEN",
+        "HERE", "THERE", "NOT", "ITS", "OUR", "YOUR", "THEIR", "TELL",
+        "FIND", "SEARCH", "LIST", "LAST", "LASTLY",
     }
-    upper_words = re.findall(r'\b([A-Z]{3,})\b', q_upper)
-    filtered = [w for w in upper_words if w not in stop]
-    if filtered:
-        return filtered[0]
+    upper_words = UPPER_WORD_PATTERN.findall(q_upper_clean)
+    known_set = set(known or [])
+    filtered  = [w for w in upper_words if w not in stop]
+
+    # Prefer a word that exactly matches a known subroutine name
+    for w in filtered:
+        if w in known_set:
+            return w
+
+    # Otherwise only accept a candidate if it clearly isn't a plain English word:
+    # must be ≥4 chars AND not in the stop set. Single short words (<4) are
+    # almost always false positives ("FIX", "BUG", "TASK").
+    for w in filtered:
+        if len(w) >= 4:
+            return w
 
     return ""
 
@@ -386,6 +533,27 @@ def _detect_file_type(source_code: str) -> str:
     return 'PROGRAM'
 
 
+_SOURCE_FILE_INDEX: dict[str, str] = {}
+
+
+def _build_source_file_index() -> dict[str, str]:
+    """Scan SOURCE_FILE_PATH once and map UPPERCASE filename -> full path."""
+    index: dict[str, str] = {}
+    if os.path.isdir(SOURCE_FILE_PATH):
+        for fname in os.listdir(SOURCE_FILE_PATH):
+            fpath = os.path.join(SOURCE_FILE_PATH, fname)
+            if os.path.isfile(fpath):
+                index[fname.upper()] = fpath
+    return index
+
+
+def refresh_source_file_index() -> dict[str, str]:
+    """Rebuild the filename->path index. Call after GitHub sync."""
+    global _SOURCE_FILE_INDEX
+    _SOURCE_FILE_INDEX = _build_source_file_index()
+    return _SOURCE_FILE_INDEX
+
+
 def load_source_file(name: str) -> str:
     """
     Directly load a subroutine source file from SOURCE_FILE_PATH.
@@ -394,16 +562,77 @@ def load_source_file(name: str) -> str:
     if not name:
         return ""
 
-    name_upper = name.upper()
+    global _SOURCE_FILE_INDEX
+    if not _SOURCE_FILE_INDEX:
+        _SOURCE_FILE_INDEX = _build_source_file_index()
 
-    if os.path.isdir(SOURCE_FILE_PATH):
-        for fname in os.listdir(SOURCE_FILE_PATH):
-            if fname.upper() == name_upper:
-                fpath = os.path.join(SOURCE_FILE_PATH, fname)
-                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
-                    return f.read()
+    fpath = _SOURCE_FILE_INDEX.get(name.upper())
+    if not fpath:
+        return ""
 
-    return ""
+    with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+        return f.read()
+
+
+# ── Shared singletons (module-level) ──────────────────────────────────────────
+_SHARED_EMBEDDINGS: OllamaEmbeddings | None = None
+_SHARED_VECTORSTORES: dict[str, Chroma]    = {}
+
+
+def _get_embeddings() -> OllamaEmbeddings:
+    global _SHARED_EMBEDDINGS
+    if _SHARED_EMBEDDINGS is None:
+        print(f"  Loading embeddings: {EMBED_MODEL} ...")
+        _SHARED_EMBEDDINGS = OllamaEmbeddings(model=EMBED_MODEL)
+    return _SHARED_EMBEDDINGS
+
+
+def _get_vectorstore(chroma_path: str) -> Chroma:
+    vs = _SHARED_VECTORSTORES.get(chroma_path)
+    if vs is None:
+        print(f"  Loading ChromaDB from {chroma_path} ...")
+        vs = Chroma(persist_directory=chroma_path, embedding_function=_get_embeddings())
+        _SHARED_VECTORSTORES[chroma_path] = vs
+    return vs
+
+
+def _safe_similarity_search(vectorstore, query: str, k: int, filter_kv: dict | None = None):
+    """
+    Chroma similarity_search with filter syntax that varies across versions.
+    Tries (1) plain filter, (2) $eq wrapped filter, (3) unfiltered + Python post-filter.
+    Never raises — returns [] on total failure and logs the reason.
+    """
+    if filter_kv:
+        # Attempt 1: short form — {"key": "value"}
+        try:
+            return vectorstore.similarity_search(query, k=k, filter=filter_kv)
+        except Exception as e1:
+            print(f"  Chroma filter (short-form) failed: {e1}")
+
+        # Attempt 2: $eq form — {"key": {"$eq": "value"}}
+        try:
+            key, val = next(iter(filter_kv.items()))
+            return vectorstore.similarity_search(
+                query, k=k, filter={key: {"$eq": val}}
+            )
+        except Exception as e2:
+            print(f"  Chroma filter ($eq form) failed: {e2}")
+
+        # Attempt 3: unfiltered + Python post-filter
+        try:
+            docs = vectorstore.similarity_search(query, k=max(k * 3, 12))
+            key, val = next(iter(filter_kv.items()))
+            return [d for d in docs if d.metadata.get(key) == val][:k]
+        except Exception as e3:
+            print(f"  Chroma unfiltered search failed: {e3}")
+            return []
+
+    # No filter path
+    try:
+        return vectorstore.similarity_search(query, k=k)
+    except Exception as e:
+        print(f"  Chroma similarity_search failed: {e}")
+        return []
 
 
 # ── Main engine ────────────────────────────────────────────────────────────────
@@ -420,28 +649,24 @@ class MVAnalysisEngine:
         self.llm = Ollama(
             model=llm_model,
             temperature=0,
-            num_predict=768,
+            num_predict=512,
             num_ctx=4096,
-            num_thread=8,
         )
         # Larger context LLM for code suggestion — needs to read full source files
+        # and emit a 7-section structured response (JIRA Task → Target Program →
+        # Current Behaviour → Gap Analysis → Changes Required → Suggested Code →
+        # Risks & Verification). num_predict must be large enough for the full
+        # Suggested Code block; num_ctx large enough to hold source + RAG excerpts.
         print(f"  Loading code-suggestion LLM (8K ctx): {llm_model} ...")
         self.code_llm = Ollama(
             model=llm_model,
             temperature=0,
-            num_predict=1024,
-            num_ctx=8192,
-            num_thread=8,
+            num_predict=4096,
+            num_ctx=16384,
         )
 
-        print(f"  Loading embeddings: {EMBED_MODEL} ...")
-        self.embeddings = OllamaEmbeddings(model=EMBED_MODEL)
-
-        print(f"  Loading ChromaDB from {chroma_path} ...")
-        self.vectorstore = Chroma(
-            persist_directory=chroma_path,
-            embedding_function=self.embeddings,
-        )
+        self.embeddings  = _get_embeddings()
+        self.vectorstore = _get_vectorstore(chroma_path)
         self.retriever = self.vectorstore.as_retriever(
             search_type="similarity",
             search_kwargs={"k": top_k},
@@ -459,17 +684,15 @@ class MVAnalysisEngine:
         """
         Retrieve relevant document chunks from ChromaDB.
 
-        If subroutine_name is given:
-          1. Try exact file match from ChromaDB
-          2. If no exact match found, load directly from SOURCE_FILE_PATH
-          3. Combine with semantic results
+        Single similarity search with k=10, then split into exact-match vs others.
+        If subroutine_name is given and has no exact match, load file directly from disk.
         """
-        relevant_docs = self.retriever.invoke(question)
-
         if subroutine_name and subroutine_name.strip():
             target = subroutine_name.strip().upper()
 
-            # Split into exact match vs others
+            # One retrieval call, wider k, filter in Python
+            relevant_docs = _safe_similarity_search(self.vectorstore, question, k=10)
+
             matching = [
                 d for d in relevant_docs
                 if target in d.metadata.get("source", "").upper()
@@ -478,13 +701,7 @@ class MVAnalysisEngine:
                 d for d in relevant_docs
                 if target not in d.metadata.get("source", "").upper()
             ]
-
-            # Direct similarity search scoped to subroutine name
-            direct_docs = self.vectorstore.similarity_search(subroutine_name, k=5)
-            direct_matching = [
-                d for d in direct_docs
-                if target in d.metadata.get("source", "").upper()
-            ]
+            direct_matching = matching  # alias kept for downstream readability
 
             # ── KEY FIX: If ChromaDB has NO exact match, load file directly ──
             if not matching and not direct_matching:
@@ -511,7 +728,11 @@ class MVAnalysisEngine:
 
             return combined[:5]
 
-        return relevant_docs
+        try:
+            return self.retriever.invoke(question)
+        except Exception as e:
+            print(f"  Retriever failed, using safe search: {e}")
+            return _safe_similarity_search(self.vectorstore, question, k=3)
 
     def prepare(
         self,
@@ -538,6 +759,12 @@ class MVAnalysisEngine:
             or subroutine_name
             or _extract_sub_from_history(history, self.known_subroutines)
         )
+
+        # ── IMPACT ANALYSIS ────────────────────────────────────────────────────
+        if q_type == "impact_analysis":
+            return self._prepare_impact_analysis(
+                question, history_sub, history, history_ticket
+            )
 
         # ── CODE SUGGESTION ────────────────────────────────────────────────────
         if q_type == "code_suggestion":
@@ -671,6 +898,162 @@ class MVAnalysisEngine:
             "confluence_data":     confluence_data,
         }
 
+    def _prepare_impact_analysis(
+        self,
+        question: str,
+        subroutine_name: str = None,
+        history: list = None,
+        ticket_key_hint: str = None,
+    ) -> dict:
+        """
+        Build an IMPACT ANALYSIS prompt — analysis only, NO code suggestion.
+
+        Reuses the same program-discovery hierarchy as _prepare_code_suggestion
+        (explicit name → directive in ticket → RAG), plus injects the dependency
+        graph context so the LLM can reason about callers / callees / impacted
+        files without writing code.
+        """
+        history = history or []
+        name    = subroutine_name or extract_name_from_question(question.upper(), self.known_subroutines)
+
+        # Reject noise names (same logic as code_suggestion)
+        if name and name not in self.known_subroutines and "." not in name:
+            print(f"  Ignoring non-MV name '{name}' — will extract from ticket instead.")
+            name = ""
+
+        source_code = load_source_file(name) if name else ""
+        if not source_code and name:
+            docs = self._get_relevant_docs(question, name)
+            source_code = "\n\n".join(d.page_content for d in docs) if docs else ""
+        file_type = _detect_file_type(source_code) if source_code else "PROGRAM"
+
+        jira_data  = {}
+        ticket_key = (
+            (JIRA_TICKET_PATTERN.search(question) and
+             JIRA_TICKET_PATTERN.search(question).group())
+            or ticket_key_hint
+            or _extract_ticket_from_history(history)
+        )
+
+        history_ctx = _build_history_ctx(history)
+        requirement = f"{history_ctx}\nDeveloper request: {question}" if history_ctx else f"Developer request: {question}"
+
+        if ticket_key and jira_configured():
+            try:
+                jira_data = get_ticket(ticket_key)
+                if "error" not in jira_data:
+                    parts = [
+                        f"Ticket  : {jira_data.get('key')} — {jira_data.get('summary')}",
+                        f"Type    : {jira_data.get('type')} | Priority: {jira_data.get('priority')} | Status: {jira_data.get('status')}",
+                        f"Assignee: {jira_data.get('assignee')}",
+                    ]
+                    if jira_data.get("description"):
+                        parts.append(f"\nDescription:\n{jira_data['description']}")
+                    if jira_data.get("acceptance_criteria"):
+                        parts.append(f"\nAcceptance Criteria:\n{jira_data['acceptance_criteria']}")
+                    if jira_data.get("comments"):
+                        comment_lines = "\n".join(
+                            f"  [{c['date']}] {c['author']}: {c['body']}"
+                            for c in jira_data["comments"][-5:]
+                        )
+                        parts.append(f"\nComments:\n{comment_lines}")
+                    ticket_block = "\n".join(parts)
+
+                    comments_text = " ".join(
+                        c.get("body", "") for c in jira_data.get("comments", [])
+                    )
+                    full_ticket_text = (
+                        (jira_data.get("summary", "") or "") + "\n" +
+                        (jira_data.get("description", "") or "") + "\n" +
+                        (jira_data.get("acceptance_criteria", "") or "") + "\n" +
+                        comments_text
+                    )
+
+                    if not name:
+                        directive_name = _extract_directive_name(
+                            full_ticket_text, self.known_subroutines
+                        )
+                        if directive_name:
+                            print(f"  [impact] Directive-matched subroutine: {directive_name}")
+                            name = directive_name
+                            source_code = load_source_file(name) or source_code
+                            file_type   = _detect_file_type(source_code) if source_code else "PROGRAM"
+
+                    if not name:
+                        name = extract_name_from_question(
+                            full_ticket_text.upper(), self.known_subroutines
+                        )
+                        if name:
+                            print(f"  [impact] Extracted subroutine from ticket text: {name}")
+                            source_code = load_source_file(name) or source_code
+                            file_type   = _detect_file_type(source_code) if source_code else "PROGRAM"
+
+                    if not name:
+                        rag_query = (
+                            jira_data.get("summary", "") + " " +
+                            jira_data.get("description", "")[:500]
+                        ).strip() or question
+                        src_docs = _safe_similarity_search(
+                            self.vectorstore, rag_query, k=8,
+                            filter_kv={"source_type": "source_code"},
+                        )
+                        file_hits: Counter = Counter()
+                        for d in src_docs:
+                            src = d.metadata.get("source", "")
+                            if src:
+                                file_hits[Path(src).name.upper()] += 1
+                        if file_hits:
+                            best_file, _ = file_hits.most_common(1)[0]
+                            candidate = best_file
+                            if candidate in self.known_subroutines:
+                                name = candidate
+                            else:
+                                stem = Path(best_file).stem
+                                if stem in self.known_subroutines:
+                                    name = stem
+                            if name:
+                                print(f"  [impact] RAG-discovered subroutine: {name}")
+                                source_code = load_source_file(name) or source_code
+                                file_type   = _detect_file_type(source_code) if source_code else "PROGRAM"
+
+                    requirement = f"{history_ctx}\n{ticket_block}\n\nDeveloper request: {question}"
+            except Exception:
+                pass
+
+        # Dependency graph context — callers / callees / impacted files
+        impact = {}
+        if name:
+            try:
+                impact = get_impact(self.graph, name)
+            except Exception:
+                impact = {}
+        graph_context = json.dumps(impact, indent=2) if impact else (
+            "No dependency graph data available for this file."
+        )
+
+        print(f"  Impact analysis: file={name}, type={file_type}, "
+              f"source_len={len(source_code)}, ticket={ticket_key or 'none'}")
+
+        prompt = IMPACT_ANALYSIS_PROMPT.format(
+            subroutine     = name or "Unknown",
+            file_type      = file_type,
+            source_code    = source_code if source_code else "Source code not found in codebase.",
+            requirement    = requirement,
+            question       = question,
+            graph_context  = graph_context,
+        )
+
+        return {
+            "prompt":              prompt,
+            "sources":             [name] if name else [],
+            "impact":              impact,
+            "question_type":       "impact_analysis",
+            "detected_subroutine": name,
+            "detected_ticket":     ticket_key or "",
+            "jira_data":           {"tickets": [jira_data]} if jira_data and "error" not in jira_data else {},
+            "confluence_data":     {},
+        }
+
     def _prepare_code_suggestion(
         self,
         question: str,
@@ -689,9 +1072,16 @@ class MVAnalysisEngine:
         history = history or []
         name    = subroutine_name or extract_name_from_question(question.upper(), self.known_subroutines)
 
+        # Reject noise names: if the extracted word isn't a known subroutine and
+        # doesn't look like MV dot-notation, drop it. Lets the Jira ticket text
+        # drive name resolution below instead of searching for "SUGGEST"/"FIX".
+        if name and name not in self.known_subroutines and "." not in name:
+            print(f"  Ignoring non-MV name '{name}' — will extract from ticket instead.")
+            name = ""
+
         # ── 1. Full source code from disk ────────────────────────────────────
         source_code = load_source_file(name) if name else ""
-        if not source_code:
+        if not source_code and name:
             # RAG fallback — retrieve relevant chunks
             docs = self._get_relevant_docs(question, name)
             source_code = "\n\n".join(d.page_content for d in docs) if docs else ""
@@ -743,16 +1133,75 @@ class MVAnalysisEngine:
 
                     ticket_block = "\n".join(parts)
 
-                    # If no subroutine name yet, try to find one in the ticket text
+                    # Build the full ticket text — summary + description + ALL
+                    # comments — so directives like "Program to modify: X" that
+                    # developers add in comments are also scanned.
+                    comments_text = " ".join(
+                        c.get("body", "") for c in jira_data.get("comments", [])
+                    )
+                    full_ticket_text = (
+                        (jira_data.get("summary", "") or "") + "\n" +
+                        (jira_data.get("description", "") or "") + "\n" +
+                        (jira_data.get("acceptance_criteria", "") or "") + "\n" +
+                        comments_text
+                    )
+
+                    # (a) Explicit directive match first — highest signal
                     if not name:
-                        ticket_text = (
-                            jira_data.get("summary", "") + " " +
-                            jira_data.get("description", "")
+                        directive_name = _extract_directive_name(
+                            full_ticket_text, self.known_subroutines
                         )
-                        name = extract_name_from_question(ticket_text.upper(), self.known_subroutines)
-                        if name:
+                        if directive_name:
+                            print(f"  Directive-matched subroutine: {directive_name} "
+                                  f"(from ticket comments/description)")
+                            name = directive_name
                             source_code = load_source_file(name) or source_code
                             file_type   = _detect_file_type(source_code) if source_code else "PROGRAM"
+
+                    # (b) Generic extraction across summary + description + comments
+                    if not name:
+                        name = extract_name_from_question(
+                            full_ticket_text.upper(), self.known_subroutines
+                        )
+                        if name:
+                            print(f"  Extracted subroutine from ticket text: {name}")
+                            source_code = load_source_file(name) or source_code
+                            file_type   = _detect_file_type(source_code) if source_code else "PROGRAM"
+
+                    # (c) RAG discovery: if ticket text still didn't mention a
+                    # subroutine by exact name, search the MV source chunks for
+                    # the most relevant program against the ticket text.
+                    if not name:
+                        rag_query = (
+                            jira_data.get("summary", "") + " " +
+                            jira_data.get("description", "")[:500]
+                        ).strip() or question
+                        src_docs = _safe_similarity_search(
+                            self.vectorstore, rag_query, k=8,
+                            filter_kv={"source_type": "source_code"},
+                        )
+                        # Tally which file had the most relevant chunks
+                        file_hits: Counter = Counter()
+                        for d in src_docs:
+                            src = d.metadata.get("source", "")
+                            if src:
+                                file_hits[Path(src).name.upper()] += 1
+                        if file_hits:
+                            best_file, _ = file_hits.most_common(1)[0]
+                            # Verify against known subroutines
+                            candidate = best_file
+                            if candidate in self.known_subroutines:
+                                name = candidate
+                            else:
+                                # Filename may include extension; strip and retry
+                                stem = Path(best_file).stem
+                                if stem in self.known_subroutines:
+                                    name = stem
+                            if name:
+                                print(f"  RAG-discovered subroutine: {name} "
+                                      f"(from {len(src_docs)} ticket-relevant chunks)")
+                                source_code = load_source_file(name) or source_code
+                                file_type   = _detect_file_type(source_code) if source_code else "PROGRAM"
 
                     # ── 3. Confluence docs for this ticket ───────────────────
                     if confluence_configured():
@@ -773,18 +1222,12 @@ class MVAnalysisEngine:
                 pass
 
         # ── 4. mv_syntax RAG — authoritative UniBasic reference ──────────────
-        # Two-pass search: first try source-type filtered, then unfiltered
+        # Resilient filtered search — tolerates Chroma version differences
         syntax_query = f"UniBasic MV BASIC {question} {name or ''}".strip()
-        syntax_docs  = self.vectorstore.similarity_search(
-            syntax_query, k=6,
-            filter={"source_type": "mv_syntax"},
+        syntax_docs  = _safe_similarity_search(
+            self.vectorstore, syntax_query, k=6,
+            filter_kv={"source_type": "mv_syntax"},
         )
-        if not syntax_docs:
-            # Fallback: search without filter — may return syntax PDFs anyway
-            all_docs    = self.vectorstore.similarity_search(syntax_query, k=8)
-            syntax_docs = [d for d in all_docs if d.metadata.get("source_type") == "mv_syntax"]
-            if not syntax_docs:
-                syntax_docs = all_docs[:4]   # last resort: best semantic match
 
         syntax_context = (
             "\n\n---\n\n".join(d.page_content for d in syntax_docs)
@@ -1070,19 +1513,28 @@ class MVAnalysisEngine:
                 if name:
                     search_attempts.append(name)
 
-                # Try each term until we get results
+                # Fire all search attempts in parallel (up to 5) — ordered merge
                 found_pages = []
                 seen_ids = set()
-                for term in search_attempts:
-                    if len(found_pages) >= 5:
-                        break
-                    results = search_pages(term, max_results=3)
-                    if results and "error" not in results[0]:
-                        for p in results:
-                            pid = p.get("id") or p.get("title")
-                            if pid and pid not in seen_ids:
-                                seen_ids.add(pid)
-                                found_pages.append(p)
+                if search_attempts:
+                    top_attempts = search_attempts[:5]
+                    with ThreadPoolExecutor(max_workers=len(top_attempts)) as pool:
+                        futures = [
+                            pool.submit(search_pages, term, 3) for term in top_attempts
+                        ]
+                        for fut in futures:
+                            if len(found_pages) >= 5:
+                                break
+                            try:
+                                results = fut.result()
+                            except Exception:
+                                continue
+                            if results and "error" not in results[0]:
+                                for p in results:
+                                    pid = p.get("id") or p.get("title")
+                                    if pid and pid not in seen_ids:
+                                        seen_ids.add(pid)
+                                        found_pages.append(p)
 
                 if found_pages:
                     confluence_data = {

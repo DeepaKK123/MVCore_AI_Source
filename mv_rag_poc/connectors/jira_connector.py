@@ -18,6 +18,7 @@ Create an API token at:
 from atlassian import Jira
 
 from config import JIRA_URL, JIRA_EMAIL, JIRA_TOKEN, JIRA_PROJECT
+from connectors._cache import ttl_cache
 
 
 # ── Client ─────────────────────────────────────────────────────────────────────
@@ -110,6 +111,7 @@ def _format_issue(issue: dict) -> dict:
 
 # ── Read-only API functions ────────────────────────────────────────────────────
 
+@ttl_cache(ttl_seconds=60)
 def get_ticket(key: str) -> dict:
     """Get full details of a specific Jira ticket by key (e.g. PROJ-123)."""
     client = _get_client()
@@ -153,6 +155,7 @@ def get_ticket(key: str) -> dict:
         return {"error": f"Cannot fetch ticket '{key}': {e}"}
 
 
+@ttl_cache(ttl_seconds=60)
 def search_tickets(jql: str, max_results: int = 20) -> list[dict]:
     """Search Jira tickets using JQL (Jira Query Language)."""
     client = _get_client()
@@ -244,6 +247,7 @@ def get_tickets_by_assignee(assignee_name: str, max_results: int = 20) -> list[d
     return search_tickets(jql, max_results=max_results)
 
 
+@ttl_cache(ttl_seconds=60)
 def get_project_summary() -> dict:
     """Return a high-level summary of the Jira project."""
     client = _get_client()

@@ -19,6 +19,7 @@ import re
 from atlassian import Confluence
 
 from config import JIRA_URL, JIRA_EMAIL, JIRA_TOKEN, CONFLUENCE_SPACE
+from connectors._cache import ttl_cache
 
 
 # ── Client ─────────────────────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ def _format_page(page: dict, include_body: bool = True) -> dict:
 
 # ── Read-only API functions ────────────────────────────────────────────────────
 
+@ttl_cache(ttl_seconds=60)
 def search_pages(query: str, max_results: int = 10) -> list[dict]:
     """
     Full-text search across Confluence using CQL.
@@ -105,6 +107,7 @@ def search_pages(query: str, max_results: int = 10) -> list[dict]:
         return [{"error": f"Confluence search failed: {e}"}]
 
 
+@ttl_cache(ttl_seconds=60)
 def get_page_by_title(title: str) -> dict:
     """Get a specific Confluence page by its exact or partial title."""
     client = _get_client()
@@ -132,6 +135,7 @@ def get_pages_for_subroutine(subroutine_name: str, max_results: int = 5) -> list
     return search_pages(subroutine_name, max_results=max_results)
 
 
+@ttl_cache(ttl_seconds=60)
 def get_recent_pages(max_results: int = 10) -> list[dict]:
     """Get most recently updated pages in the Confluence space."""
     client = _get_client()
@@ -158,6 +162,7 @@ def get_recent_pages(max_results: int = 10) -> list[dict]:
         return [{"error": f"Cannot fetch recent pages: {e}"}]
 
 
+@ttl_cache(ttl_seconds=300)
 def get_space_pages(max_results: int = 50) -> list[dict]:
     """List all pages in the configured Confluence space (titles only)."""
     client = _get_client()
@@ -177,6 +182,7 @@ def get_space_pages(max_results: int = 50) -> list[dict]:
         return [{"error": f"Cannot list space pages: {e}"}]
 
 
+@ttl_cache(ttl_seconds=300)
 def get_space_summary() -> dict:
     """Return high-level info about the Confluence space."""
     client = _get_client()

@@ -2,13 +2,70 @@
 app.py — MVCore main Streamlit entry point.
 """
 
+import asyncio
+import logging
 import time
 import threading
 import queue as _queue
 import streamlit as st
 from pathlib import Path
 
-from analysis.query_engine import MVAnalysisEngine, get_quick_reply
+
+# ── Silence benign Tornado websocket-closed noise ─────────────────────────────
+# When a user closes the browser tab mid-stream, Streamlit's background write
+# raises tornado.websocket.WebSocketClosedError / StreamClosedError. asyncio
+# reports it as "Task exception was never retrieved" — harmless, but noisy.
+# Install a custom asyncio exception handler and a logging filter to drop
+# *only* these closed-connection errors; real errors still surface normally.
+try:
+    from tornado.websocket import WebSocketClosedError
+    from tornado.iostream import StreamClosedError
+except Exception:                          # tornado not importable? skip.
+    WebSocketClosedError = ()              # type: ignore[assignment]
+    StreamClosedError    = ()              # type: ignore[assignment]
+
+_WS_CLOSED_EXC = tuple(
+    t for t in (WebSocketClosedError, StreamClosedError)
+    if isinstance(t, type)
+)
+
+
+def _silence_ws_closed(loop, context):
+    exc = context.get("exception")
+    if _WS_CLOSED_EXC and isinstance(exc, _WS_CLOSED_EXC):
+        return
+    loop.default_exception_handler(context)
+
+
+def _install_ws_silencer():
+    # Install on the current (and any future) asyncio loop we can reach.
+    try:
+        asyncio.get_event_loop().set_exception_handler(_silence_ws_closed)
+    except RuntimeError:
+        pass
+    try:
+        policy = asyncio.get_event_loop_policy()
+        loop   = policy.get_event_loop()
+        loop.set_exception_handler(_silence_ws_closed)
+    except Exception:
+        pass
+
+
+_install_ws_silencer()
+
+
+class _DropWsClosed(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        if "WebSocketClosedError" in msg or "Stream is closed" in msg:
+            return False
+        return True
+
+
+for _name in ("tornado.application", "tornado.general", "asyncio"):
+    logging.getLogger(_name).addFilter(_DropWsClosed())
+
+from analysis.query_engine import MVAnalysisEngine, get_quick_reply, refresh_source_file_index
 from graph.dependency_graph import load_graph, build_graph, save_graph
 from rag.ingest import ingest_corpus
 from config import (
@@ -56,8 +113,19 @@ engine = load_engine()
 def rebuild_knowledge_base():
     with st.spinner("Rebuilding graph…"):
         save_graph(build_graph(SOURCE_DIR), GRAPH_PATH)
-    with st.spinner("Re-indexing ChromaDB…"):
-        ingest_corpus(SOURCE_DIR, DOCS_DIR, chroma_path=CHROMA_PATH)
+    with st.spinner("Re-indexing changed files…"):
+        ingest_corpus(SOURCE_DIR, DOCS_DIR, chroma_path=CHROMA_PATH, incremental=True)
+    refresh_source_file_index()
+    # Drop cached GitHub commit data — source has changed
+    try:
+        from connectors.github_connector import (
+            get_file_commits, get_recent_repo_commits, get_contributors,
+        )
+        get_file_commits.cache_clear()
+        get_recent_repo_commits.cache_clear()
+        get_contributors.cache_clear()
+    except Exception:
+        pass
     st.cache_resource.clear()
 
 
@@ -258,15 +326,15 @@ if st.session_state.sv_active:
         # ── Drain the chunk queue ─────────────────────────────────────────────
         q    = st.session_state.sv_queue
         done = False
-        for _ in range(200):
+        while True:
             try:
                 chunk = q.get_nowait()
-                if chunk is None:
-                    done = True
-                    break
-                st.session_state.sv_buf += chunk
             except _queue.Empty:
                 break
+            if chunk is None:
+                done = True
+                break
+            st.session_state.sv_buf += chunk
 
         stopped = st.session_state.sv_stop_ev.is_set()
 
@@ -297,7 +365,7 @@ if st.session_state.sv_active:
             st.session_state.sv_result = None
             st.rerun()
         else:
-            time.sleep(0.15)
+            time.sleep(0.25)
             st.rerun()
 
 # ── Chat input ────────────────────────────────────────────────────────────────
@@ -336,7 +404,7 @@ if question and not st.session_state.sv_active:
 
             stop_ev       = threading.Event()
             chunk_q       = _queue.Queue()
-            use_code_llm  = result.get("question_type") == "code_suggestion"
+            use_code_llm  = result.get("question_type") in ("code_suggestion", "impact_analysis")
             threading.Thread(
                 target=_stream_worker,
                 args=(engine, result["prompt"], chunk_q, stop_ev, use_code_llm),

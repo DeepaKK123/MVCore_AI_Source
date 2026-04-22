@@ -24,6 +24,7 @@ from config import (
     GITHUB_MV_FOLDER,
     SYNC_META_PATH,
 )
+from connectors._cache import ttl_cache
 
 
 # ── Client ─────────────────────────────────────────────────────────────────────
@@ -153,6 +154,7 @@ def sync_to_local(local_dir: str = "./mv_source") -> dict:
 
 # ── Commit history ─────────────────────────────────────────────────────────────
 
+@ttl_cache(ttl_seconds=120)
 def get_file_commits(filename: str, max_commits: int = 10) -> list[dict]:
     """Commit history for a specific MV BASIC file."""
     repo   = _get_repo()
@@ -174,6 +176,7 @@ def get_file_commits(filename: str, max_commits: int = 10) -> list[dict]:
     return result
 
 
+@ttl_cache(ttl_seconds=120)
 def get_recent_repo_commits(max_commits: int = 20) -> list[dict]:
     """Most recent commits across the entire repo."""
     repo   = _get_repo()
@@ -232,6 +235,7 @@ def get_commit_details(sha: str) -> dict:
     }
 
 
+@ttl_cache(ttl_seconds=300)
 def get_contributors() -> list[dict]:
     """List all contributors with commit counts."""
     repo   = _get_repo()
