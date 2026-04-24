@@ -7,25 +7,27 @@ import streamlit as st
 
 # ── Question type labels + badge CSS classes ──────────────────────────────────
 QTYPE_LABEL = {
-    "subroutine":      "Code Analysis",
-    "code_suggestion": "Code Suggestion",
-    "jira":            "Jira",
-    "confluence":      "Confluence",
-    "history":         "Git History",
-    "dict":            "Dict Layout",
-    "chat":            "Chat",
-    "not_found":       "Not Found",
+    "subroutine":       "Code Analysis",
+    "code_suggestion":  "Code Suggestion",
+    "unibasic_general": "UniBasic",
+    "jira":             "Jira",
+    "confluence":       "Confluence",
+    "history":          "Git History",
+    "dict":             "Dict Layout",
+    "chat":             "Chat",
+    "not_found":        "Not Found",
 }
 
 _BADGE_CLASS = {
-    "subroutine":      "badge-code",
-    "code_suggestion": "badge-suggest",
-    "jira":            "badge-jira",
-    "confluence":      "badge-conf",
-    "history":         "badge-git",
-    "dict":            "badge-dict",
-    "chat":            "badge-chat",
-    "not_found":       "badge-chat",
+    "subroutine":       "badge-code",
+    "code_suggestion":  "badge-suggest",
+    "unibasic_general": "badge-code",
+    "jira":             "badge-jira",
+    "confluence":       "badge-conf",
+    "history":          "badge-git",
+    "dict":             "badge-dict",
+    "chat":             "badge-chat",
+    "not_found":        "badge-chat",
 }
 
 

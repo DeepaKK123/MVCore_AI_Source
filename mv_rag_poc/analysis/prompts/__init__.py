@@ -11,12 +11,14 @@ from .dict_prompt import DICT_PROMPT
 from .quick_replies import QUICK_REPLIES, get_quick_reply
 from .code_suggestion_prompt import CODE_SUGGESTION_PROMPT
 from .impact_analysis_prompt import IMPACT_ANALYSIS_PROMPT
+from .unibasic_general_prompt import UNIBASIC_GENERAL_PROMPT
 
 __all__ = [
     "SUBROUTINE_PROMPT",
     "DICT_PROMPT",
     "CODE_SUGGESTION_PROMPT",
     "IMPACT_ANALYSIS_PROMPT",
+    "UNIBASIC_GENERAL_PROMPT",
     "QUICK_REPLIES",
     "get_quick_reply",
 ]

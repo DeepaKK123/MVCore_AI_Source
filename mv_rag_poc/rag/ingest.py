@@ -103,18 +103,29 @@ def _chunk_docs(docs: list) -> list:
         chunk_overlap=100,
         separators=["\nSUBROUTINE ", "\nFUNCTION ", "\n$INSERT ", "\n* ", "\n!", "\n"],
     )
+    # Larger chunks for syntax manuals — UniBasic statements with THEN/ELSE branches,
+    # options, and examples easily span 2000+ chars. 800-char chunks fragment them,
+    # causing retrieval to miss half the syntax for multi-operation questions.
     syntax_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=100,
+        chunk_size=1500,
+        chunk_overlap=300,
         separators=["\n\n", "\n", ". ", " "],
     )
-    code_chunks  = code_splitter.split_documents(
+    doc_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=150,
+        separators=["\n\n", "\n", ". ", " "],
+    )
+    code_chunks   = code_splitter.split_documents(
         [d for d in docs if d.metadata.get("source_type") == "source_code"]
     )
-    other_chunks = syntax_splitter.split_documents(
-        [d for d in docs if d.metadata.get("source_type") != "source_code"]
+    syntax_chunks = syntax_splitter.split_documents(
+        [d for d in docs if d.metadata.get("source_type") == "mv_syntax"]
     )
-    return code_chunks + other_chunks
+    doc_chunks    = doc_splitter.split_documents(
+        [d for d in docs if d.metadata.get("source_type") not in ("source_code", "mv_syntax")]
+    )
+    return code_chunks + syntax_chunks + doc_chunks
 
 
 def ingest_corpus(

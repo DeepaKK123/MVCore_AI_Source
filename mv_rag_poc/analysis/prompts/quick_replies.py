@@ -55,13 +55,23 @@ QUICK_REPLIES: dict[str, str] = {
 }
 
 
+_CODE_SIGNALS = (
+    "code", "unibasic", "mv basic", "multivalue", "syntax",
+    "snippet", "example", "generate", "write a", "subroutine",
+)
+
+
 def get_quick_reply(question: str) -> str | None:
     """
     Return instant reply for greetings and small talk.
     Returns None for real queries that need LLM processing.
     Uses whole-word matching so 'hi' does not match 'this', 'which', 'their' etc.
+    Skips quick replies when the question contains code/technical signals so that
+    words like 'hello' in 'give me unibasic code for hello world' don't hijack routing.
     """
     cleaned = question.lower().strip().rstrip("!?.,")
+    if any(sig in cleaned for sig in _CODE_SIGNALS):
+        return None
     for pattern, reply in QUICK_REPLIES.items():
         if re.search(r'\b' + re.escape(pattern) + r'\b', cleaned):
             return reply

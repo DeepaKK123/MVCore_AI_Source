@@ -22,6 +22,7 @@ from analysis.prompts import (
     DICT_PROMPT,
     CODE_SUGGESTION_PROMPT,
     IMPACT_ANALYSIS_PROMPT,
+    UNIBASIC_GENERAL_PROMPT,
     get_quick_reply,
 )
 from config import (
@@ -312,6 +313,26 @@ IMPACT_ANALYSIS_KEYWORDS = [
 ]
 
 
+UNIBASIC_GENERAL_KEYWORDS = [
+    # Explicit language reference
+    "unibasic code", "mv basic code", "multivalue code",
+    "unibasic syntax", "mv basic syntax", "multivalue syntax",
+    "unibasic example", "mv basic example", "unibasic snippet",
+    "unibasic program", "unibasic subroutine", "unibasic function",
+    "write in unibasic", "code in unibasic", "in unibasic",
+    "using unibasic", "with unibasic", "unibasic for",
+    "give unibasic", "give me unibasic", "show unibasic",
+    # General educational / code generation phrasing
+    "hello world",
+    "code example", "sample code", "code snippet", "example code", "working example",
+    "how do i write", "how do i create", "how do i print",
+    "how do i read a file", "how do i write a file",
+    "how do i loop", "how do i declare", "how do i use",
+    "what is the syntax", "syntax for",
+    "teach me", "show me how to",
+    "generate code for", "generate unibasic",
+]
+
 HISTORY_KEYWORDS = [
     "who changed", "who modified", "who wrote", "who created",
     "who made", "who did", "who committed", "who updated",
@@ -341,6 +362,14 @@ def detect_question_type(question: str, known: list[str] = None) -> str:
      10. Default → 'subroutine'
     """
     q_lower = question.lower()
+
+    # Priority 0: general UniBasic/MV BASIC code generation or syntax education
+    # (no Jira ticket — those stay as code_suggestion)
+    if (
+        any(kw in q_lower for kw in UNIBASIC_GENERAL_KEYWORDS)
+        and not JIRA_TICKET_PATTERN.search(question)
+    ):
+        return "unibasic_general"
 
     # Priority 1: impact analysis — must run BEFORE code_suggestion
     if any(kw in q_lower for kw in IMPACT_ANALYSIS_KEYWORDS):
@@ -760,6 +789,10 @@ class MVAnalysisEngine:
             or _extract_sub_from_history(history, self.known_subroutines)
         )
 
+        # ── UNIBASIC GENERAL (syntax / code generation / education) ───────────
+        if q_type == "unibasic_general":
+            return self._prepare_unibasic_general(question, history)
+
         # ── IMPACT ANALYSIS ────────────────────────────────────────────────────
         if q_type == "impact_analysis":
             return self._prepare_impact_analysis(
@@ -896,6 +929,113 @@ class MVAnalysisEngine:
             "detected_ticket":     history_ticket or "",
             "jira_data":           jira_data,
             "confluence_data":     confluence_data,
+        }
+
+    # UniBasic statement keywords used to run targeted per-operation searches
+    _MV_OPS = [
+        "OPEN", "READ", "READU", "READV", "READVU",
+        "WRITE", "WRITEV", "WRITEU", "WRITET",
+        "DELETE", "DELETEU",
+        "LOCATE", "EXTRACT", "INSERT", "REMOVE", "REPLACE",
+        "PRINT", "DISPLAY", "INPUT", "INPUTNULL", "CRT",
+        "CALL", "RETURN", "SUBROUTINE", "FUNCTION",
+        "SELECT", "READNEXT", "CLEARSELECT", "SELECTV",
+        "FOR", "NEXT", "LOOP", "REPEAT", "WHILE", "UNTIL",
+        "IF", "CASE", "BEGIN CASE", "END CASE",
+        "MATREAD", "MATWRITE", "DIM", "MAT",
+        "LOCK", "UNLOCK", "COMMIT", "ROLLBACK",
+        "CONVERT", "TRIM", "FIELD", "LEN", "NUM", "STR",
+    ]
+
+    _NL_TO_OP = {
+        "open": "OPEN", "read": "READ", "write": "WRITE",
+        "print": "PRINT", "display": "PRINT", "show": "PRINT",
+        "delete": "DELETE", "loop": "LOOP", "select": "SELECT",
+        "find": "LOCATE", "input": "INPUT", "call": "CALL",
+        "lock": "READU", "extract": "EXTRACT", "insert": "INSERT",
+    }
+
+    def _prepare_unibasic_general(self, question: str, history: list = None) -> dict:
+        """Handle general UniBasic/MV BASIC code generation and syntax questions.
+
+        Uses multi-query retrieval: one search per detected operation keyword so
+        that a question like 'OPEN + READ + PRINT' retrieves syntax docs for all
+        three operations, not just whichever scored highest in a single search.
+        """
+        history = history or []
+
+        # ── Detect UniBasic operation keywords from the question ───────────────
+        q_upper = question.upper()
+        q_lower = question.lower()
+
+        detected_ops: list[str] = []
+        for op in self._MV_OPS:
+            if re.search(r'\b' + op + r'\b', q_upper):
+                detected_ops.append(op)
+        for word, op in self._NL_TO_OP.items():
+            if word in q_lower and op not in detected_ops:
+                detected_ops.append(op)
+
+        # ── Multi-query retrieval — one search per detected operation ──────────
+        all_docs: list = []
+        seen: set = set()
+
+        def _add(docs):
+            for d in docs:
+                key = d.page_content[:120]
+                if key not in seen:
+                    seen.add(key)
+                    all_docs.append(d)
+
+        # Primary search: full question
+        _add(_safe_similarity_search(
+            self.vectorstore, question, k=6,
+            filter_kv={"source_type": "mv_syntax"},
+        ))
+
+        # Targeted search per detected operation (cap at 6 ops to stay fast)
+        for op in detected_ops[:6]:
+            _add(_safe_similarity_search(
+                self.vectorstore,
+                f"UniBasic {op} statement syntax example",
+                k=3, filter_kv={"source_type": "mv_syntax"},
+            ))
+
+        # Fallback: unfiltered if mv_syntax collection is empty / not yet indexed
+        if not all_docs:
+            _add(_safe_similarity_search(self.vectorstore, question, k=8))
+
+        syntax_context = (
+            "\n\n---\n\n".join(d.page_content for d in all_docs[:14])
+            if all_docs else
+            "No syntax reference found in the knowledge base."
+        )
+
+        history_ctx  = _build_history_ctx(history)
+        ops_hint     = (
+            f"\nRequired operations — ALL must appear in the generated code: "
+            + ", ".join(detected_ops)
+            if detected_ops else ""
+        )
+        full_question = (
+            f"{history_ctx}\nQUESTION: {question}{ops_hint}"
+            if history_ctx else
+            f"QUESTION: {question}{ops_hint}"
+        )
+
+        prompt = UNIBASIC_GENERAL_PROMPT.format(
+            syntax_context=syntax_context,
+            question=full_question,
+        )
+
+        print(f"  UniBasic general: detected_ops={detected_ops}, "
+              f"syntax_chunks={len(all_docs)}")
+
+        return {
+            "prompt":        prompt,
+            "sources":       list({d.metadata.get("source", "") for d in all_docs}),
+            "impact":        {},
+            "question_type": "unibasic_general",
         }
 
     def _prepare_impact_analysis(

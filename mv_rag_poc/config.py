@@ -17,7 +17,7 @@ GITHUB_BRANCH    = os.getenv("GITHUB_BRANCH", "main")
 GITHUB_MV_FOLDER = os.getenv("GITHUB_MV_FOLDER", "mv_source")
 
 # ── LLM & Embeddings ──────────────────────────────────────────────────────────
-LLM_MODEL   = os.getenv("LLM_MODEL",   "qwen2.5-coder:32b")
+LLM_MODEL   = os.getenv("LLM_MODEL",   "qwen2.5-coder:14b")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")
 
 # ── Local paths ────────────────────────────────────────────────────────────────
