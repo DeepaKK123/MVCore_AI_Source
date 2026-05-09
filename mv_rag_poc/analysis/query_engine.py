@@ -24,6 +24,18 @@ from analysis.prompts import (
     IMPACT_ANALYSIS_PROMPT,
     UNIBASIC_GENERAL_PROMPT,
     get_quick_reply,
+    # Jira
+    JIRA_KEYWORDS,
+    JIRA_TICKET_PATTERN,
+    DIRECTIVE_PATTERNS,
+    CODE_SUGGESTION_KEYWORDS,
+    CODE_CONTEXT_TERMS,
+    IMPACT_ANALYSIS_KEYWORDS,
+    build_jira_list_prompt,
+    build_jira_detail_prompt,
+    # GitHub
+    HISTORY_KEYWORDS,
+    build_github_prompt,
 )
 from config import (
     LLM_MODEL,
@@ -86,6 +98,24 @@ def _build_history_ctx(history: list) -> str:
     return "CONVERSATION HISTORY:\n" + "\n".join(lines) + "\n"
 
 
+def _build_unibasic_history_ctx(history: list) -> str:
+    """Format recent exchanges for unibasic_general, preserving more code context.
+
+    Keeps up to 1200 chars per assistant message so the model can see and
+    continue the code it generated in the prior turn.
+    """
+    if not history:
+        return ""
+    lines = []
+    for msg in history[-4:]:
+        role    = "User" if msg["role"] == "user" else "Assistant"
+        content = msg["content"]
+        if msg["role"] == "assistant":
+            content = content[:1200]
+        lines.append(f"{role}: {content}")
+    return "PREVIOUS CONVERSATION:\n" + "\n".join(lines) + "\n"
+
+
 def _extract_ticket_from_history(history: list) -> str:
     """Return the most recently mentioned Jira ticket key from history."""
     for msg in reversed(history or []):
@@ -121,6 +151,9 @@ def get_known_subroutines() -> list[str]:
 
 
 # ── Question type detection ────────────────────────────────────────────────────
+# Jira / GitHub keywords and patterns live in analysis/prompts/jira_prompts.py
+# and analysis/prompts/github_prompts.py — imported at the top of this file.
+
 DICT_KEYWORDS = [
     "dict", "dictionary", "layout", "file layout",
     "what fields", "structure of", "field definition",
@@ -142,177 +175,6 @@ CONFLUENCE_KEYWORDS = [
     "what is documented", "knowledge base",
 ]
 
-JIRA_KEYWORDS = [
-    # Core Jira terms
-    "jira", "ticket", "tickets", "story", "stories", "epic", "epics",
-    "sprint", "backlog", "issue", "issues", "bug", "bugs", "defect",
-    "task", "tasks", "subtask", "user story",
-
-    # Manager-style sprint questions
-    "what's in the sprint", "what is in the sprint",
-    "what's in the current sprint", "what is in the current sprint",
-    "what's in the upcoming sprint", "what is in the upcoming sprint",
-    "what's in the next sprint", "what is in the next sprint",
-    "current sprint", "active sprint", "this sprint", "sprint tasks",
-    "sprint items", "sprint stories", "sprint tickets", "sprint status",
-    "upcoming sprint", "next sprint", "planned for next",
-    "what are we working on", "what is the team working on",
-    "what are we building", "what's being built",
-    "what's planned", "what is planned", "what is coming",
-    "sprint goal", "sprint scope",
-
-    # Delivery & progress
-    "what did we complete", "what was completed", "what was delivered",
-    "what was done", "what has been done", "completed tickets",
-    "closed tickets", "done this sprint", "delivered this sprint",
-    "what's at risk", "what is at risk", "overdue", "blocked",
-    "what is blocked", "blocking", "impediment",
-
-    # Team & assignment
-    "assigned to", "working on", "who is working on",
-    "what is deepa working on", "what is the developer working on",
-    "team workload", "who owns", "owner of", "responsible for",
-
-    # Planning & roadmap
-    "roadmap", "next release", "what is coming", "future work",
-    "planned feature", "planned sprint", "what is planned for",
-    "release plan", "delivery plan",
-
-    # Project health
-    "project status", "how is the project", "project overview",
-    "project summary", "how are we doing", "progress update",
-    "open bugs", "known issues", "bug count",
-
-    # Relation lookups
-    "related ticket", "which ticket", "what ticket", "ticket for",
-    "stories for", "linked to", "what stories", "business requirement",
-    "requirement for",
-]
-
-JIRA_TICKET_PATTERN = re.compile(r'\b[A-Z]{1,10}-\d+\b')
-MV_DOT_PATTERN      = re.compile(r'\b([A-Z][A-Z0-9]*(?:\.[A-Z0-9]+){1,})\b')
-UPPER_WORD_PATTERN  = re.compile(r'\b([A-Z]{3,})\b')
-
-# Directive patterns developers add to Jira comments / descriptions, e.g.
-#   "Program need to be modified: UPDATE.ORDER"
-#   "Program to modify - ORD.PROCESS"
-#   "File: CUSTOMER.LOOKUP"
-#   "Subroutine to update: GET.ORDER.DETAILS"
-# Captures the name token that follows the colon / dash.
-DIRECTIVE_PATTERNS = [
-    re.compile(
-        r'(?:PROGRAM|FILE|SUBROUTINE|ROUTINE|MODULE|FUNCTION)'
-        r'(?:\s+(?:NAME|TO|THAT|WHICH|NEED(?:S|ED)?|HAS|HAVE|MUST|SHOULD|WILL))*'
-        r'\s*(?:TO\s+BE\s+|NEED(?:S|ED)?\s+TO\s+BE\s+)?'
-        r'(?:MODIFIED|MODIFY|UPDATED|UPDATE|CHANGED|CHANGE|FIXED|FIX|TOUCHED)?'
-        r'\s*[:\-–=]\s*'
-        r'([A-Z][A-Z0-9._]*)',
-        re.IGNORECASE,
-    ),
-]
-
-
-def _extract_directive_name(text: str, known: list[str]) -> str:
-    """
-    Find names declared via explicit directives like
-    'Program to modify: UPDATE.ORDER' in ticket text.
-    Prefers matches against known subroutines; falls back to any MV-shaped token.
-    """
-    if not text:
-        return ""
-    upper = text.upper()
-    known_set = set(known or [])
-    for pat in DIRECTIVE_PATTERNS:
-        for m in pat.finditer(upper):
-            candidate = m.group(1).strip().rstrip('.,;:)')
-            if candidate in known_set:
-                return candidate
-            # Allow MV dot-notation even when not in known set
-            if "." in candidate and MV_DOT_PATTERN.fullmatch(candidate):
-                return candidate
-    return ""
-
-CODE_SUGGESTION_KEYWORDS = [
-    # Direct suggestion requests
-    "suggest", "suggest a fix", "suggest code", "suggest the fix",
-    "suggest code change", "suggest the code change",
-    "suggest code for the task", "suggest code for the sprint",
-    "suggest code for the ticket", "suggest code for the story",
-    "suggest change for", "suggest fix for",
-
-    # Fix / resolve
-    "fix the code", "fix the bug", "fix the defect", "fix this",
-    "how to fix", "how do i fix", "resolve the bug", "resolve the issue",
-    "resolve the defect", "resolve the ticket",
-    "to fix task", "to fix the task", "to fix this task",
-    "to fix ticket", "to fix the ticket", "to fix the story",
-    "to fix the bug", "to resolve",
-
-    # Implement / build
-    "how to implement", "how do i implement",
-    "implement the", "implement this", "implement the task",
-    "implement the story", "implement the ticket", "implement the feature",
-    "build the feature", "build the", "develop the feature",
-
-    # Code operations
-    "add the feature", "add feature", "enhance", "enhancement",
-    "update the code", "modify the code", "change the code",
-    "write the code", "write code for", "write code to",
-    "code change", "code for the", "code suggestion",
-    "what code", "give me the code", "show me the code",
-    "defect fix", "patch", "apply the fix",
-
-    # Which-file / which-program questions (asking where to make a change)
-    "which program", "what program", "which file", "what file",
-    "which subroutine", "what subroutine", "which routine", "what routine",
-    "which module", "what module", "where do i change", "where to change",
-    "where do i modify", "where to modify",
-    "needs to be modified", "needs to be changed", "needs modification",
-    "has to be modified", "has to be changed",
-    "needs to change", "need to modify", "need to change",
-    "should be modified", "should be changed",
-    "program to modify", "program to change", "program to fix",
-    "subroutine to modify", "subroutine to change", "subroutine to fix",
-    "file to modify", "file to change", "file to fix",
-
-    # Manager-style requests referencing sprint tasks
-    "code for the sprint task", "code for the current task",
-    "how do i implement the sprint", "code change for the task",
-    "develop the sprint task", "implement the sprint task",
-]
-
-# When a Jira ticket ID appears alongside any of these, treat as code_suggestion
-# instead of a generic ticket detail lookup.
-CODE_CONTEXT_TERMS = (
-    "program", "subroutine", "routine", "module", "file",
-    "modify", "modified", "modification",
-    "change", "changed",
-    "fix", "fixed",
-    "implement", "resolve", "code",
-)
-
-IMPACT_ANALYSIS_KEYWORDS = [
-    # Direct impact-analysis phrasing
-    "impact analysis", "impact analyses", "impact assessment",
-    "analyze the impact", "analyse the impact",
-    "analyze impact", "analyse impact",
-    "what is the impact", "what's the impact", "whats the impact",
-    "what will be the impact", "what would be the impact",
-    "assess the impact", "evaluate the impact",
-    "impact of the change", "impact of changing", "impact of this change",
-    "impact on", "side effect", "side-effect", "side effects",
-    "what breaks", "what will break", "what would break",
-    "what gets affected", "what is affected", "what would be affected",
-    "what is the effect", "what's the effect", "effect of changing",
-    "downstream impact", "upstream impact", "ripple effect",
-    "who is affected", "what is impacted",
-    "blast radius", "risk of changing",
-    # Phrasing that often pairs with a ticket
-    "impact if we change", "impact if we modify",
-    "impact of fixing", "impact of the fix",
-]
-
-
 UNIBASIC_GENERAL_KEYWORDS = [
     # Explicit language reference
     "unibasic code", "mv basic code", "multivalue code",
@@ -333,37 +195,69 @@ UNIBASIC_GENERAL_KEYWORDS = [
     "generate code for", "generate unibasic",
 ]
 
-HISTORY_KEYWORDS = [
-    "who changed", "who modified", "who wrote", "who created",
-    "who made", "who did", "who committed", "who updated",
-    "last changed", "last modified", "last updated", "last commit",
-    "commit history", "change history", "history of",
-    "what changed", "what was changed", "recent changes", "recent commits",
-    "when was", "when did", "modified by", "changed by",
-    "contributors", "who works on", "who developed",
-    "made the change", "made the commit", "did the change",
-]
+MV_DOT_PATTERN     = re.compile(r'\b([A-Z][A-Z0-9]*(?:\.[A-Z0-9]+){1,})\b')
+UPPER_WORD_PATTERN = re.compile(r'\b([A-Z]{3,})\b')
 
 
-def detect_question_type(question: str, known: list[str] = None) -> str:
+def _extract_directive_name(text: str, known: list[str]) -> str:
+    """
+    Find names declared via explicit directives like
+    'Program to modify: UPDATE.ORDER' in ticket text.
+    Prefers matches against known subroutines; falls back to any MV-shaped token.
+    """
+    if not text:
+        return ""
+    upper = text.upper()
+    known_set = set(known or [])
+    for pat in DIRECTIVE_PATTERNS:
+        for m in pat.finditer(upper):
+            candidate = m.group(1).strip().rstrip('.,;:)')
+            if candidate in known_set:
+                return candidate
+            if "." in candidate and MV_DOT_PATTERN.fullmatch(candidate):
+                return candidate
+    return ""
+
+
+def detect_question_type(question: str, known: list[str] = None, history: list = None) -> str:
     """
     Detect question type. Priority order:
-      1. Impact analysis keywords → 'impact_analysis'   (checked FIRST so
-         phrases like "analyze the impact if we change..." do not get routed
-         to code_suggestion by "change" / "fix" substring matches)
-      2. Code suggestion keywords → 'code_suggestion'
-      3. Jira ticket ID (PROJ-123) + suggestion → 'code_suggestion'
-      4. Confluence keywords → 'confluence'
-      5. Jira ticket ID only → 'jira'
-      6. Jira keywords → 'jira'
-      7. History keywords → 'history'
-      8. Known subroutine name → 'subroutine'
-      9. Dict keywords → 'dict'
-     10. Default → 'subroutine'
+      0. Conversational follow-up to unibasic_general → 'unibasic_general'
+      1. UniBasic/MV BASIC keywords → 'unibasic_general'
+      2. Impact analysis keywords → 'impact_analysis'
+      3. Code suggestion keywords → 'code_suggestion'
+      4. Jira ticket ID (PROJ-123) + suggestion → 'code_suggestion'
+      5. Confluence keywords → 'confluence'
+      6. Jira ticket ID only → 'jira'
+      7. Jira keywords → 'jira'
+      8. History keywords → 'history'
+      9. Known subroutine name → 'subroutine'
+     10. Dict keywords → 'dict'
+     11. Default → 'subroutine'
     """
     q_lower = question.lower()
 
-    # Priority 0: general UniBasic/MV BASIC code generation or syntax education
+    # Priority 0: conversational follow-up — if the last assistant response was
+    # unibasic_general and this looks like a short directive (≤ 15 words) with no
+    # strong signals for another type, keep routing as unibasic_general so the
+    # user can refine, extend, or iterate on the code the model just generated.
+    if history and not JIRA_TICKET_PATTERN.search(question):
+        last_asst = next(
+            (m for m in reversed(history) if m.get("role") == "assistant"),
+            None,
+        )
+        if (
+            last_asst
+            and last_asst.get("question_type") == "unibasic_general"
+            and len(question.split()) <= 20
+            and not any(kw in q_lower for kw in JIRA_KEYWORDS[:30])
+            and not any(kw in q_lower for kw in CONFLUENCE_KEYWORDS)
+            and not any(kw in q_lower for kw in HISTORY_KEYWORDS)
+            and not any(kw in q_lower for kw in IMPACT_ANALYSIS_KEYWORDS)
+        ):
+            return "unibasic_general"
+
+    # Priority 1: general UniBasic/MV BASIC code generation or syntax education
     # (no Jira ticket — those stay as code_suggestion)
     if (
         any(kw in q_lower for kw in UNIBASIC_GENERAL_KEYWORDS)
@@ -713,15 +607,29 @@ class MVAnalysisEngine:
         """
         Retrieve relevant document chunks from ChromaDB.
 
-        Single similarity search with k=10, then split into exact-match vs others.
-        If subroutine_name is given and has no exact match, load file directly from disk.
+        When subroutine_name is given, load the file directly from disk first
+        (guaranteed hit), then supplement with ChromaDB context chunks.
+        Similarity search alone is unreliable for named files because source
+        code chunks score lower than syntax PDFs on most questions.
         """
         if subroutine_name and subroutine_name.strip():
             target = subroutine_name.strip().upper()
 
-            # One retrieval call, wider k, filter in Python
-            relevant_docs = _safe_similarity_search(self.vectorstore, question, k=10)
+            # ── Step 1: load the target file directly from disk (always reliable) ──
+            raw_source = load_source_file(target)
+            if raw_source:
+                primary_doc = Document(
+                    page_content=raw_source,
+                    metadata={"source": target, "source_type": "source_code"},
+                )
+                # Return only the primary file — graph/Jira/Confluence supply all
+                # supplementary context. Extra similarity results just add noise
+                # (unrelated programs that happen to be semantically close).
+                return [primary_doc]
 
+            # File not on disk — fall back to ChromaDB similarity search
+            print(f"  '{target}' not found on disk. Falling back to ChromaDB search...")
+            relevant_docs = _safe_similarity_search(self.vectorstore, question, k=15)
             matching = [
                 d for d in relevant_docs
                 if target in d.metadata.get("source", "").upper()
@@ -730,32 +638,11 @@ class MVAnalysisEngine:
                 d for d in relevant_docs
                 if target not in d.metadata.get("source", "").upper()
             ]
-            direct_matching = matching  # alias kept for downstream readability
+            if matching:
+                return (matching + others[:2])[:5]
 
-            # ── KEY FIX: If ChromaDB has NO exact match, load file directly ──
-            if not matching and not direct_matching:
-                print(f"  ⚠ ChromaDB has no chunks for '{target}'. "
-                      f"Loading directly from disk...")
-                raw_source = load_source_file(target)
-                if raw_source:
-                    fallback_doc = Document(
-                        page_content=raw_source,
-                        metadata={"source": target, "loaded_from": "disk_fallback"}
-                    )
-                    return [fallback_doc] + others[:2]
-                else:
-                    print(f"  ✗ '{target}' not found on disk either.")
-
-            # Combine: exact matches first, then others
-            seen = set()
-            combined = []
-            for d in direct_matching + matching + others:
-                key = d.page_content[:100]
-                if key not in seen:
-                    seen.add(key)
-                    combined.append(d)
-
-            return combined[:5]
+            print(f"  ✗ '{target}' not found in ChromaDB either.")
+            return others[:5]
 
         try:
             return self.retriever.invoke(question)
@@ -775,7 +662,7 @@ class MVAnalysisEngine:
         Runs under the Streamlit spinner.
         """
         history = history or []
-        q_type  = detect_question_type(question, self.known_subroutines)
+        q_type  = detect_question_type(question, self.known_subroutines, history)
 
         # Carry forward context from history when question is a follow-up
         history_ticket = (
@@ -823,6 +710,7 @@ class MVAnalysisEngine:
             dict_content = load_dict_file(name)
             history_ctx  = _build_history_ctx(history)
             prompt = DICT_PROMPT.format(
+                filename=name or "UNKNOWN",
                 dict_context=dict_content,
                 question=f"{history_ctx}\nQUESTION: {question}" if history_ctx else question,
             )
@@ -968,13 +856,28 @@ class MVAnalysisEngine:
         q_upper = question.upper()
         q_lower = question.lower()
 
+        # These words are also common English — only treat as ops when the user
+        # typed them in UPPERCASE (clear coding intent), not lowercase phrasing
+        # like "give me a syntax for file open" or "how do i use if statements".
+        _AMBIGUOUS_OPS = {
+            "FOR", "IF", "WHILE", "UNTIL", "RETURN", "INPUT",
+            "REMOVE", "REPLACE", "SELECT", "CASE", "REPEAT",
+            "FUNCTION", "READ",
+        }
+
         detected_ops: list[str] = []
         for op in self._MV_OPS:
             if re.search(r'\b' + op + r'\b', q_upper):
-                detected_ops.append(op)
+                if op in _AMBIGUOUS_OPS:
+                    # Only count it if the user wrote it in uppercase
+                    if re.search(r'\b' + op + r'\b', question):
+                        detected_ops.append(op)
+                else:
+                    detected_ops.append(op)
         for word, op in self._NL_TO_OP.items():
             if word in q_lower and op not in detected_ops:
-                detected_ops.append(op)
+                if op not in _AMBIGUOUS_OPS:
+                    detected_ops.append(op)
 
         # ── Multi-query retrieval — one search per detected operation ──────────
         all_docs: list = []
@@ -987,19 +890,54 @@ class MVAnalysisEngine:
                     seen.add(key)
                     all_docs.append(d)
 
-        # Primary search: full question
-        _add(_safe_similarity_search(
-            self.vectorstore, question, k=6,
-            filter_kv={"source_type": "mv_syntax"},
-        ))
+        # Precise per-operation query strings — include the actual syntax signature
+        # so the embedding search lands on the statement reference page, not on
+        # unrelated sections that happen to mention the same word (e.g. the debugger
+        # "open file" commands vs the OPEN statement itself).
+        _OP_QUERIES = {
+            "OPEN":     "OPEN DICT filename TO filevar THEN ELSE statement syntax",
+            "READ":     "READ record FROM filevar key THEN ELSE statement syntax",
+            "READU":    "READU record FROM filevar key LOCKED THEN ELSE syntax",
+            "READV":    "READV value FROM filevar key attrib THEN ELSE syntax",
+            "WRITE":    "WRITE record ON filevar key statement syntax",
+            "WRITEV":   "WRITEV value ON filevar key attrib statement syntax",
+            "DELETE":   "DELETE filevar key statement syntax",
+            "LOCATE":   "LOCATE value IN array BY order SETTING pos THEN ELSE syntax",
+            "EXTRACT":  "EXTRACT value from dynamic array attribute multivalued syntax",
+            "INSERT":   "INSERT value into dynamic array attribute multivalued syntax",
+            "SELECT":   "SELECT filevar TO listvar statement syntax",
+            "READNEXT": "READNEXT key FROM listvar THEN ELSE statement syntax",
+            "CALL":     "CALL subroutine parameters syntax",
+            "PRINT":    "PRINT CRT DISPLAY output statement syntax",
+            "INPUT":    "INPUT variable prompt statement syntax",
+            "FOR":      "FOR variable = start TO end STEP loop syntax",
+            "LOOP":     "LOOP WHILE UNTIL REPEAT statement syntax",
+            "IF":       "IF condition THEN ELSE statement syntax",
+            "MATREAD":  "MATREAD matrix FROM filevar key THEN ELSE syntax",
+            "MATWRITE": "MATWRITE matrix ON filevar key syntax",
+            "LOCK":     "LOCK record filevar key LOCKED THEN ELSE syntax",
+            "CONVERT":  "CONVERT characters expression syntax",
+            "TRIM":     "TRIM string leading trailing syntax",
+            "FIELD":    "FIELD string delimiter occurrence syntax",
+        }
 
-        # Targeted search per detected operation (cap at 6 ops to stay fast)
+        # Targeted queries FIRST — these use the actual syntax signature so they
+        # land on the right reference page, not on unrelated sections like the
+        # debugger or the launcher that also mention "open" or "read".
         for op in detected_ops[:6]:
+            targeted_query = _OP_QUERIES.get(op, f"UniBasic {op} statement syntax example")
             _add(_safe_similarity_search(
                 self.vectorstore,
-                f"UniBasic {op} statement syntax example",
-                k=3, filter_kv={"source_type": "mv_syntax"},
+                targeted_query,
+                k=4, filter_kv={"source_type": "mv_syntax"},
             ))
+
+        # Primary question search AFTER targeted — supplements with broader context
+        # but does not override the precise chunks already collected above.
+        _add(_safe_similarity_search(
+            self.vectorstore, question, k=4,
+            filter_kv={"source_type": "mv_syntax"},
+        ))
 
         # Fallback: unfiltered if mv_syntax collection is empty / not yet indexed
         if not all_docs:
@@ -1011,11 +949,36 @@ class MVAnalysisEngine:
             "No syntax reference found in the knowledge base."
         )
 
-        history_ctx  = _build_history_ctx(history)
-        ops_hint     = (
-            f"\nRequired operations — ALL must appear in the generated code: "
+        # ── Pull real source-code examples from mv_source ─────────────────────
+        # Build a targeted query from detected ops so we land on subroutines that
+        # actually use the requested statements, not arbitrary code files.
+        code_query = (
+            " ".join(detected_ops) + " " + question if detected_ops else question
+        )
+        src_docs = _safe_similarity_search(
+            self.vectorstore, code_query, k=3,
+            filter_kv={"source_type": "source_code"},
+        )
+        # Cap each chunk to ~800 chars so we don't blow the context window.
+        _MAX_CHUNK = 800
+        code_examples = (
+            "\n\n---\n\n".join(
+                d.page_content[:_MAX_CHUNK] for d in src_docs
+            )
+            if src_docs else
+            "No source-code examples found in the knowledge base."
+        )
+
+        history_ctx = _build_unibasic_history_ctx(history)
+
+        # Only hint the detected ops when the user explicitly asked for MORE than one,
+        # or used a phrasing that clearly requires a multi-step example.
+        # A single detected op (e.g. OPEN) means the question is about that one thing —
+        # hinting it as "required" causes the LLM to pad the answer with READ/READNEXT.
+        ops_hint = (
+            f"\nRequired operations (user asked for all of these): "
             + ", ".join(detected_ops)
-            if detected_ops else ""
+            if len(detected_ops) > 1 else ""
         )
         full_question = (
             f"{history_ctx}\nQUESTION: {question}{ops_hint}"
@@ -1024,16 +987,18 @@ class MVAnalysisEngine:
         )
 
         prompt = UNIBASIC_GENERAL_PROMPT.format(
-            syntax_context=syntax_context,
             question=full_question,
+            syntax_context=syntax_context,
+            code_examples=code_examples,
         )
 
         print(f"  UniBasic general: detected_ops={detected_ops}, "
-              f"syntax_chunks={len(all_docs)}")
+              f"syntax_chunks={len(all_docs)}, source_chunks={len(src_docs)}")
 
+        all_sources = list({d.metadata.get("source", "") for d in all_docs + src_docs})
         return {
             "prompt":        prompt,
-            "sources":       list({d.metadata.get("source", "") for d in all_docs}),
+            "sources":       all_sources,
             "impact":        {},
             "question_type": "unibasic_general",
         }
@@ -1712,52 +1677,9 @@ class MVAnalysisEngine:
         )
 
         if is_detail_query:
-            # ── Detail prompt — show every field ─────────────────────────────
-            prompt = (
-                "You are an MVCore assistant. The user wants FULL DETAILS of a Jira ticket.\n"
-                "IMPORTANT: Copy all field values VERBATIM — do NOT paraphrase or alter any names.\n\n"
-                "Format your response using these sections (skip any section that has no data):\n\n"
-                "**[KEY] — Summary**\n"
-                "- **Type:** | **Priority:** | **Status:** | **Assignee:** | **Reporter:**\n"
-                "- **Created:** | **Updated:** | **Sprint:** | **Epic:**\n"
-                "- **URL:** (if available)\n\n"
-                "**Description**\n"
-                "Full description text from the ticket.\n\n"
-                "**Acceptance Criteria**\n"
-                "List each criterion on a new line.\n\n"
-                "**Subtasks** (if any)\n"
-                "- SUBKEY: Summary (Status)\n\n"
-                "**Linked Issues** (if any)\n"
-                "- TYPE: KEY — Summary\n\n"
-                "**Comments** (most recent first, all comments)\n"
-                "- [Date] Author: comment text\n\n"
-                "**Related Confluence Docs** (if any)\n"
-                "List page titles.\n\n"
-                f"{history_ctx}\n"
-                f"JIRA DATA:\n{json.dumps(jira_data, indent=2)}"
-                f"{conf_context}\n\n"
-                f"QUESTION: {question}"
-            )
+            prompt = build_jira_detail_prompt(jira_data, history_ctx, conf_context, question)
         else:
-            # ── List prompt — concise overview per ticket ──────────────────
-            prompt = (
-                "You are an MVCore assistant. Answer using the Jira data below.\n"
-                "IMPORTANT: Copy all field values (sprint name, ticket keys, summaries, assignee names) "
-                "VERBATIM from the data — do NOT paraphrase, correct spelling, or alter any names.\n"
-                f"{'Start with exactly: **Sprint: ' + sprint_name + '**' if sprint_name else ''}\n"
-                "For each ticket show:\n"
-                "  **KEY** — Summary\n"
-                "  Type: X | Priority: X | Status: X | Assignee: X\n"
-                "  > One sentence from the description (if available)\n"
-                "  - SUBKEY: Subtask summary (Status)  ← indent subtasks\n\n"
-                "Group tickets by status if there are more than 5. "
-                "End with a one-line summary (e.g. '3 In Progress, 2 To Do, 1 Done').\n"
-                "If Confluence docs are referenced, list them at the end.\n\n"
-                f"{history_ctx}\n"
-                f"JIRA DATA:\n{json.dumps(jira_data, indent=2)}"
-                f"{conf_context}\n\n"
-                f"QUESTION: {question}"
-            )
+            prompt = build_jira_list_prompt(jira_data, sprint_name, history_ctx, conf_context, question)
 
         return {
             "prompt":              prompt,
@@ -1828,14 +1750,7 @@ class MVAnalysisEngine:
             git_data = {"error": str(e)}
 
         history_ctx = _build_history_ctx(history or [])
-        prompt = (
-            "You are an MVCore assistant. Answer using the GitHub data below.\n"
-            "List each commit as: SHA — Author (Date): message\n"
-            "Close with one sentence summarising the change pattern. Under 150 words.\n\n"
-            f"{history_ctx}\n"
-            f"GITHUB DATA:\n{json.dumps(git_data, indent=2)}\n\n"
-            f"QUESTION: {question}"
-        )
+        prompt = build_github_prompt(git_data, history_ctx, question)
 
         return {
             "prompt":              prompt,

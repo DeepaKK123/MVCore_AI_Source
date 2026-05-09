@@ -1,41 +1,41 @@
 """
 analysis/prompts/subroutine_prompt.py
+
+Uses the fine-tuned model's training template exactly:
+    ### System: / ### Instruction: / ### Response:
+The analysis instruction is plain-language (no markdown headers) so the
+fine-tuned model can answer in the same style as its Q&A training examples.
 """
 
 from langchain_core.prompts import PromptTemplate
 
+_SYSTEM = (
+    "You are a UniBasic/U2 multivalue database expert. "
+    "You write accurate UniBasic subroutines, answer UniBasic syntax questions, "
+    "and explain UniBasic/U2 multivalue concepts. "
+    "Always use correct UniBasic/U2 syntax. "
+    "Never use Python, Java, or generic BASIC syntax."
+)
+
 SUBROUTINE_PROMPT = PromptTemplate(
     input_variables=["context", "graph_context", "question"],
-    template="""You are a senior MultiValue BASIC architect advising a development team.
-Answer professionally and precisely. No padding, no repetition, no filler phrases.
-
-SOURCE CODE:
-{context}
-
-DEPENDENCY & CROSS-REFERENCE DATA:
-{graph_context}
-
-QUESTION:
-{question}
-
-Respond in this exact structure:
-
-**Purpose**
-One or two sentences on the business function this subroutine performs.
-
-**How It Works**
-3–5 concise bullet points covering the key processing steps.
-
-**Dependencies**
-- Calls: subroutines this program invokes
-- Called by: programs that call this subroutine
-- Files accessed: files read or written
-
-**Risks & Observations**
-List only genuine findings — READU locks, unclosed file handles, hard-coded values, missing error handling.
-If none found, state: None identified.
-
-**Confidence:** High / Medium / Low
-
-Total response: under 220 words.""",
+    template=(
+        "### System:\n"
+        + _SYSTEM
+        + "\n\n"
+        "### Instruction:\n"
+        "Analyze the following UniBasic program and answer these points:\n"
+        "1. What is the business purpose of this program?\n"
+        "2. What are the key processing steps it performs?\n"
+        "3. What files does it open, read, or write?\n"
+        "4. What other subroutines or programs does it call?\n"
+        "5. Are there any risks or observations — such as missing error handling, "
+        "record locks (READU), hard-coded values, or unclosed files?\n\n"
+        "SOURCE CODE:\n"
+        "{context}\n\n"
+        "DEPENDENCY AND CALL GRAPH DATA:\n"
+        "{graph_context}\n\n"
+        "{question}\n\n"
+        "### Response:\n"
+    ),
 )

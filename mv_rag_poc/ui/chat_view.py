@@ -32,10 +32,14 @@ def render_data(result: dict, q_type: str) -> None:
         render_confluence(confluence_data)
     elif q_type == "jira":
         render_confluence(confluence_data)
-        render_jira(jira_data)
+        render_jira(jira_data, expanded=True)
     elif q_type == "history":
         render_git(git_data)
     elif q_type in ("subroutine", "dict"):
+        render_impact(result.get("impact") or {})
+        render_sources(result.get("sources") or [])
+    elif q_type == "impact_analysis":
+        render_jira(jira_data, expanded=True)
         render_impact(result.get("impact") or {})
         render_sources(result.get("sources") or [])
     elif q_type == "code_suggestion":
@@ -128,7 +132,15 @@ def render_stream_handler(llm_model: str) -> None:
 
         stopped = st.session_state.sv_stop_ev.is_set()
         cursor  = "" if (done or stopped) else "▌"
-        placeholder.markdown(st.session_state.sv_buf + cursor)
+        buf = st.session_state.sv_buf + cursor
+        if q_type == "unibasic_general":
+            placeholder.markdown(f"```\n{buf}\n```")
+        else:
+            placeholder.markdown(buf)
+
+        if not done and not stopped:
+            if st.button("⏹ Stop generating", key="stop_btn"):
+                st.session_state.sv_stop_ev.set()
 
         if done or stopped:
             elapsed = (

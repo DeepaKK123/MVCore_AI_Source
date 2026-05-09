@@ -1,0 +1,215 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Tahoma, Arial, sans-serif">
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1200" y2="700" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#060d20"/>
+      <stop offset="100%" stop-color="#0a1833"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="40%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="panelLeft" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#052e16"/>
+      <stop offset="100%" stop-color="#071a2e"/>
+    </linearGradient>
+    <linearGradient id="panelCenter" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0c1a4e"/>
+      <stop offset="100%" stop-color="#071a2e"/>
+    </linearGradient>
+    <linearGradient id="panelRight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e0a4e"/>
+      <stop offset="100%" stop-color="#071a2e"/>
+    </linearGradient>
+    <filter id="glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
+    </marker>
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="1" fill="#1e3a5f" opacity="0.4"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="700" fill="url(#bgGrad)"/>
+  <rect width="1200" height="700" fill="url(#dots)"/>
+  <rect x="1" y="1" width="1198" height="698" fill="none" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- ═══ HEADER ═══ -->
+  <rect x="0" y="0" width="1200" height="88" fill="#070e20" opacity="0.97"/>
+  <rect x="0" y="86" width="1200" height="3" fill="url(#accentLine)"/>
+  <rect x="28" y="16" width="52" height="52" rx="12" fill="#1d4ed8" opacity="0.9"/>
+  <text x="54" y="50" text-anchor="middle" font-size="26">🤖</text>
+  <text x="94" y="42" font-size="26" font-weight="700" fill="#f1f5f9" letter-spacing="0.3">MVCore AI Assistant</text>
+  <text x="94" y="68" font-size="12.5" fill="#64748b">AI-Powered Code Intelligence Platform for MultiValue / UniBasic (MV BASIC) Codebases</text>
+  <rect x="976" y="24" width="196" height="36" rx="18" fill="#0f2a5e" stroke="#3b82f6" stroke-width="1"/>
+  <text x="1074" y="47" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#93c5fd">🔒  100% Local &amp; Private</text>
+
+  <!-- ═══ LEFT PANEL — KNOWLEDGE BASE ═══ -->
+  <rect x="29" y="101" width="316" height="462" rx="15" fill="#10b981" opacity="0.06" filter="url(#glow)"/>
+  <rect x="32" y="104" width="310" height="456" rx="14" fill="url(#panelLeft)" stroke="#10b981" stroke-width="1.5"/>
+  <rect x="32" y="104" width="310" height="46" rx="14" fill="#10b981" opacity="0.22"/>
+  <rect x="32" y="132" width="310" height="18" fill="#10b981" opacity="0.22"/>
+  <text x="187" y="133" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#6ee7b7" letter-spacing="1">📚  KNOWLEDGE BASE</text>
+
+  <rect x="50" y="163" width="274" height="70" rx="8" fill="#041f11" stroke="#10b981" stroke-width="1" opacity="0.85"/>
+  <rect x="50" y="163" width="4" height="70" rx="2" fill="#10b981"/>
+  <text x="65" y="185" font-size="13" font-weight="600" fill="#6ee7b7">🗂️  MV Source Programs</text>
+  <text x="65" y="203" font-size="11" fill="#4ade80" opacity="0.85">100+ UniBasic programs ingested</text>
+  <text x="65" y="220" font-size="11" fill="#4ade80" opacity="0.85">Chunked &amp; vector-embedded</text>
+
+  <rect x="50" y="245" width="274" height="70" rx="8" fill="#041f11" stroke="#10b981" stroke-width="1" opacity="0.85"/>
+  <rect x="50" y="245" width="4" height="70" rx="2" fill="#10b981"/>
+  <text x="65" y="267" font-size="13" font-weight="600" fill="#6ee7b7">📄  Dict File Layouts</text>
+  <text x="65" y="285" font-size="11" fill="#4ade80" opacity="0.85">File structures &amp; field definitions</text>
+  <text x="65" y="302" font-size="11" fill="#4ade80" opacity="0.85">Answers data schema questions</text>
+
+  <rect x="50" y="327" width="274" height="70" rx="8" fill="#041f11" stroke="#10b981" stroke-width="1" opacity="0.85"/>
+  <rect x="50" y="327" width="4" height="70" rx="2" fill="#10b981"/>
+  <text x="65" y="349" font-size="13" font-weight="600" fill="#6ee7b7">📖  UniBasic PDF Reference</text>
+  <text x="65" y="367" font-size="11" fill="#4ade80" opacity="0.85">Unidata / MV BASIC syntax manual</text>
+  <text x="65" y="384" font-size="11" fill="#4ade80" opacity="0.85">Statement syntax &amp; examples</text>
+
+  <rect x="50" y="409" width="274" height="70" rx="8" fill="#041f11" stroke="#34d399" stroke-width="1.5" opacity="0.9"/>
+  <rect x="50" y="409" width="4" height="70" rx="2" fill="#34d399"/>
+  <text x="65" y="431" font-size="13" font-weight="600" fill="#6ee7b7">🔍  ChromaDB Vector Store</text>
+  <text x="65" y="449" font-size="11" fill="#4ade80" opacity="0.85">Semantic similarity search</text>
+  <text x="65" y="466" font-size="11" fill="#4ade80" opacity="0.85">nomic-embed-text embeddings</text>
+
+  <rect x="50" y="491" width="274" height="57" rx="8" fill="#041f11" stroke="#10b981" stroke-width="1" opacity="0.85"/>
+  <rect x="50" y="491" width="4" height="57" rx="2" fill="#10b981"/>
+  <text x="65" y="513" font-size="13" font-weight="600" fill="#6ee7b7">🕸️  Dependency Graph</text>
+  <text x="65" y="530" font-size="11" fill="#4ade80" opacity="0.85">CALL relationships &amp; impact paths</text>
+
+  <!-- Arrow: Left → Center -->
+  <line x1="343" y1="332" x2="376" y2="332" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="360" y="322" text-anchor="middle" font-size="9" fill="#3b82f6" opacity="0.9">RAG</text>
+
+  <!-- ═══ CENTER PANEL — AI ENGINE ═══ -->
+  <rect x="377" y="91" width="446" height="482" rx="16" fill="#1d4ed8" opacity="0.1" filter="url(#glow)"/>
+  <rect x="380" y="95" width="440" height="472" rx="14" fill="url(#panelCenter)" stroke="#3b82f6" stroke-width="2.5"/>
+  <rect x="380" y="95" width="440" height="46" rx="14" fill="#1d4ed8" opacity="0.38"/>
+  <rect x="380" y="123" width="440" height="18" fill="#1d4ed8" opacity="0.38"/>
+  <text x="600" y="124" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#93c5fd" letter-spacing="1">⚡  MVCORE AI ENGINE</text>
+
+  <rect x="398" y="155" width="404" height="70" rx="8" fill="#07143a" stroke="#3b82f6" stroke-width="1" opacity="0.9"/>
+  <rect x="398" y="155" width="4" height="70" rx="2" fill="#3b82f6"/>
+  <text x="414" y="177" font-size="13" font-weight="600" fill="#93c5fd">🧠  Smart Intent Detection</text>
+  <text x="414" y="195" font-size="11" fill="#60a5fa" opacity="0.9">14 question types: analysis, code suggestion, impact,</text>
+  <text x="414" y="212" font-size="11" fill="#60a5fa" opacity="0.9">Jira, GitHub, Confluence, UniBasic syntax &amp; more</text>
+
+  <rect x="398" y="237" width="404" height="70" rx="8" fill="#07143a" stroke="#3b82f6" stroke-width="1" opacity="0.9"/>
+  <rect x="398" y="237" width="4" height="70" rx="2" fill="#3b82f6"/>
+  <text x="414" y="259" font-size="13" font-weight="600" fill="#93c5fd">🔎  RAG Retrieval Pipeline</text>
+  <text x="414" y="277" font-size="11" fill="#60a5fa" opacity="0.9">Direct file load + semantic vector search</text>
+  <text x="414" y="294" font-size="11" fill="#60a5fa" opacity="0.9">Multi-query retrieval per UniBasic operation keyword</text>
+
+  <rect x="398" y="319" width="404" height="70" rx="8" fill="#07143a" stroke="#3b82f6" stroke-width="1" opacity="0.9"/>
+  <rect x="398" y="319" width="4" height="70" rx="2" fill="#3b82f6"/>
+  <text x="414" y="341" font-size="13" font-weight="600" fill="#93c5fd">📝  Contextual Prompt Building</text>
+  <text x="414" y="359" font-size="11" fill="#60a5fa" opacity="0.9">Source code + graph + Jira + Confluence context</text>
+  <text x="414" y="376" font-size="11" fill="#60a5fa" opacity="0.9">Conversation history for multi-turn follow-ups</text>
+
+  <rect x="398" y="401" width="404" height="82" rx="8" fill="#07143a" stroke="#60a5fa" stroke-width="2" opacity="0.95"/>
+  <rect x="398" y="401" width="4" height="82" rx="2" fill="#60a5fa"/>
+  <text x="414" y="423" font-size="13" font-weight="600" fill="#93c5fd">🤖  Local LLM Inference (Ollama)</text>
+  <text x="414" y="441" font-size="11" fill="#60a5fa" opacity="0.9">qwen2.5-coder:14b  ·  16K context window</text>
+  <text x="414" y="458" font-size="11" fill="#60a5fa" opacity="0.9">Streaming token output · 0 latency to cloud</text>
+  <text x="414" y="475" font-size="11" fill="#34d399">✓  No API key  ·  No internet required  ·  Fully private</text>
+
+  <rect x="398" y="495" width="404" height="58" rx="8" fill="#07143a" stroke="#3b82f6" stroke-width="1" opacity="0.9"/>
+  <rect x="398" y="495" width="4" height="58" rx="2" fill="#3b82f6"/>
+  <text x="414" y="517" font-size="13" font-weight="600" fill="#93c5fd">💡  Code Suggestion Engine</text>
+  <text x="414" y="535" font-size="11" fill="#60a5fa" opacity="0.9">Jira-driven changes  ·  Full program rewrite support</text>
+
+  <!-- Arrow: Center → Right -->
+  <line x1="821" y1="332" x2="854" y2="332" stroke="#8b5cf6" stroke-width="2.5" marker-end="url(#arrowPurple)"/>
+  <text x="838" y="322" text-anchor="middle" font-size="9" fill="#8b5cf6" opacity="0.9">Stream</text>
+
+  <!-- ═══ RIGHT PANEL — INTEGRATIONS & OUTPUT ═══ -->
+  <rect x="855" y="101" width="316" height="462" rx="15" fill="#8b5cf6" opacity="0.06" filter="url(#glow)"/>
+  <rect x="858" y="104" width="310" height="456" rx="14" fill="url(#panelRight)" stroke="#8b5cf6" stroke-width="1.5"/>
+  <rect x="858" y="104" width="310" height="46" rx="14" fill="#8b5cf6" opacity="0.22"/>
+  <rect x="858" y="132" width="310" height="18" fill="#8b5cf6" opacity="0.22"/>
+  <text x="1013" y="133" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#c4b5fd" letter-spacing="1">🔌  INTEGRATIONS &amp; OUTPUT</text>
+
+  <rect x="876" y="163" width="274" height="70" rx="8" fill="#120830" stroke="#8b5cf6" stroke-width="1" opacity="0.85"/>
+  <rect x="876" y="163" width="4" height="70" rx="2" fill="#8b5cf6"/>
+  <text x="891" y="185" font-size="13" font-weight="600" fill="#c4b5fd">🎫  Jira Integration</text>
+  <text x="891" y="203" font-size="11" fill="#a78bfa" opacity="0.9">Sprints, tickets, backlog, open bugs</text>
+  <text x="891" y="220" font-size="11" fill="#a78bfa" opacity="0.9">Links code changes to stories automatically</text>
+
+  <rect x="876" y="245" width="274" height="70" rx="8" fill="#120830" stroke="#8b5cf6" stroke-width="1" opacity="0.85"/>
+  <rect x="876" y="245" width="4" height="70" rx="2" fill="#8b5cf6"/>
+  <text x="891" y="267" font-size="13" font-weight="600" fill="#c4b5fd">📋  Confluence Docs</text>
+  <text x="891" y="285" font-size="11" fill="#a78bfa" opacity="0.9">Design docs, runbooks &amp; specs</text>
+  <text x="891" y="302" font-size="11" fill="#a78bfa" opacity="0.9">Cross-linked to subroutine analysis</text>
+
+  <rect x="876" y="327" width="274" height="70" rx="8" fill="#120830" stroke="#8b5cf6" stroke-width="1" opacity="0.85"/>
+  <rect x="876" y="327" width="4" height="70" rx="2" fill="#8b5cf6"/>
+  <text x="891" y="349" font-size="13" font-weight="600" fill="#c4b5fd">🐙  GitHub History</text>
+  <text x="891" y="367" font-size="11" fill="#a78bfa" opacity="0.9">Commit history &amp; file changes</text>
+  <text x="891" y="384" font-size="11" fill="#a78bfa" opacity="0.9">Contributors &amp; last-modified tracking</text>
+
+  <rect x="876" y="409" width="274" height="70" rx="8" fill="#120830" stroke="#a78bfa" stroke-width="1.5" opacity="0.9"/>
+  <rect x="876" y="409" width="4" height="70" rx="2" fill="#a78bfa"/>
+  <text x="891" y="431" font-size="13" font-weight="600" fill="#c4b5fd">💬  Streamlit Chat UI</text>
+  <text x="891" y="449" font-size="11" fill="#a78bfa" opacity="0.9">Streaming word-by-word responses</text>
+  <text x="891" y="466" font-size="11" fill="#a78bfa" opacity="0.9">Conversation history &amp; context</text>
+
+  <rect x="876" y="491" width="274" height="57" rx="8" fill="#120830" stroke="#8b5cf6" stroke-width="1" opacity="0.85"/>
+  <rect x="876" y="491" width="4" height="57" rx="2" fill="#8b5cf6"/>
+  <text x="891" y="513" font-size="13" font-weight="600" fill="#c4b5fd">📊  Impact Analysis</text>
+  <text x="891" y="530" font-size="11" fill="#a78bfa" opacity="0.9">Callers, callees &amp; affected programs</text>
+
+  <!-- ═══ BOTTOM SECTION ═══ -->
+  <rect x="0" y="582" width="1200" height="118" fill="#050c1c" opacity="0.97"/>
+  <rect x="0" y="582" width="1200" height="3" fill="url(#accentLine)"/>
+
+  <text x="32" y="606" font-size="10" fill="#334155" font-weight="700" letter-spacing="2">BUILT WITH</text>
+
+  <rect x="112" y="592" width="76" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="150" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🐍 Python</text>
+
+  <rect x="196" y="592" width="92" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="242" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🦜 LangChain</text>
+
+  <rect x="296" y="592" width="90" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="341" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🔮 ChromaDB</text>
+
+  <rect x="394" y="592" width="74" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="431" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🦙 Ollama</text>
+
+  <rect x="476" y="592" width="134" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="543" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🧠 qwen2.5-coder:14b</text>
+
+  <rect x="618" y="592" width="84" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="660" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">⚡ Streamlit</text>
+
+  <rect x="710" y="592" width="78" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="749" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🎫 Jira API</text>
+
+  <rect x="796" y="592" width="90" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="841" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🐙 GitHub API</text>
+
+  <rect x="894" y="592" width="94" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="941" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">📋 Confluence</text>
+
+  <rect x="996" y="592" width="58" height="26" rx="13" fill="#1e293b" stroke="#2d3e57" stroke-width="1"/>
+  <text x="1025" y="609" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#94a3b8">🔍 RAG</text>
+
+  <text x="600" y="648" text-anchor="middle" font-size="14" font-weight="600" fill="#475569">
+    🚀  Empowering developers to understand, analyze &amp; modernize legacy MultiValue BASIC codebases with AI
+  </text>
+  <text x="600" y="675" text-anchor="middle" font-size="11" fill="#2d3e57">
+    #GenerativeAI  #RAG  #LocalAI  #Ollama  #MultiValue  #UniBasic  #ERP  #Python  #LangChain  #CodeIntelligence  #AI  #SoftwareDevelopment
+  </text>
+
+</svg>

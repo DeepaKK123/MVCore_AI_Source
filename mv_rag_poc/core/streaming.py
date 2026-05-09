@@ -47,7 +47,10 @@ def start_llm_stream(engine, result: dict, t_prep: float) -> None:
     """Start a background LLM thread and initialise all sv_* session-state keys."""
     stop_ev      = threading.Event()
     chunk_q: _queue.Queue = _queue.Queue()
-    use_code_llm = result.get("question_type") in ("code_suggestion", "impact_analysis")
+    use_code_llm = result.get("question_type") in (
+        "code_suggestion", "impact_analysis", "unibasic_general",
+        "subroutine", "dict", "jira", "confluence", "history",
+    )
 
     threading.Thread(
         target=stream_worker,

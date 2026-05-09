@@ -1,0 +1,292 @@
+<svg width="1200" height="790" viewBox="0 0 1200 790" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Tahoma, Arial, sans-serif">
+  <defs>
+    <linearGradient id="headerGrad" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e3a5f"/>
+    </linearGradient>
+    <linearGradient id="footerGrad" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#0ea5e9"/>
+      <stop offset="50%"  stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#f0f9ff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#f0f9ff"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="llmGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#fffbeb"/>
+      <stop offset="100%" stop-color="#fff7ed"/>
+    </linearGradient>
+    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#faf5ff"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="capGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#eff6ff"/>
+      <stop offset="50%"  stop-color="#faf5ff"/>
+      <stop offset="100%" stop-color="#eff6ff"/>
+    </linearGradient>
+    <linearGradient id="storeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#ecfeff"/>
+      <stop offset="100%" stop-color="#eff6ff"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#94a3b8" flood-opacity="0.13"/>
+    </filter>
+    <filter id="llmShadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#f59e0b" flood-opacity="0.2"/>
+    </filter>
+    <filter id="aiShadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#7c3aed" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrW" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#94a3b8"/>
+    </marker>
+    <marker id="arrB" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#0ea5e9"/>
+    </marker>
+    <pattern id="dots" width="30" height="30" patternUnits="userSpaceOnUse">
+      <circle cx="15" cy="15" r="1" fill="#bae6fd" opacity="0.4"/>
+    </pattern>
+  </defs>
+
+  <!-- ══════════ BACKGROUND ══════════ -->
+  <rect width="1200" height="790" fill="url(#bgGrad)"/>
+  <rect width="1200" height="790" fill="url(#dots)"/>
+
+  <!-- ══════════ DARK HEADER ══════════ -->
+  <rect x="0" y="0" width="1200" height="82" fill="url(#headerGrad)"/>
+  <rect x="0" y="80" width="1200" height="3" fill="url(#accentLine)"/>
+  <!-- Logo mark -->
+  <rect x="24" y="14" width="50" height="50" rx="12" fill="#1e40af" opacity="0.6"/>
+  <rect x="26" y="16" width="46" height="46" rx="10" fill="none" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="49" y="48" text-anchor="middle" font-size="24">🤖</text>
+  <!-- Title -->
+  <text x="90" y="38" font-size="24" font-weight="700" fill="#f1f5f9">Enterprise AI Copilot  <tspan fill="#38bdf8">for Legacy Systems</tspan></text>
+  <text x="90" y="58" font-size="12" fill="#7dd3fc">Private cloud · Domain fine-tuned LLM · RAG + Knowledge Graph · Controlled web search · Zero data exposure</text>
+  <text x="90" y="74" font-size="10.5" fill="#475569">Analyze  ·  Explain  ·  Document  ·  Modernize  ·  Debug  ·  Impact Analysis  ·  Business Logic Extraction</text>
+  <!-- Right badge -->
+  <rect x="896" y="18" width="282" height="42" rx="21" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="1037" y="37" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#38bdf8">🔒  Closed Environment</text>
+  <text x="1037" y="52" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#475569">No public AI APIs  ·  Your data stays private</text>
+
+  <!-- ══════════ PRIVATE CLOUD BOUNDARY ══════════ -->
+  <rect x="16" y="86" width="1168" height="544" rx="20" fill="#fafeff" stroke="#f59e0b" stroke-width="2" stroke-dasharray="8 4"/>
+  <text x="34" y="106" font-size="10.5" fill="#d97706" font-weight="700" letter-spacing="1">🔒  PRIVATE CLOUD BOUNDARY — ALL LEGACY CODE · EMBEDDINGS · BUSINESS DATA NEVER LEAVES THIS ENVIRONMENT</text>
+  <text x="34" y="122" font-size="10" fill="#94a3b8">🔒</text>
+  <text x="1166" y="122" text-anchor="end" font-size="10">🔒</text>
+  <text x="34" y="622" font-size="10">🔒</text>
+  <text x="1166" y="622" text-anchor="end" font-size="10">🔒</text>
+
+  <!-- ══════════ ACCESS ROW ══════════ -->
+  <!-- Users -->
+  <text x="170" y="148" text-anchor="middle" font-size="26">👤</text>
+  <text x="256" y="148" text-anchor="middle" font-size="26">👤</text>
+  <text x="342" y="148" text-anchor="middle" font-size="26">👤</text>
+  <text x="428" y="148" text-anchor="middle" font-size="26">👤</text>
+  <text x="514" y="148" text-anchor="middle" font-size="26">👤</text>
+  <text x="342" y="168" text-anchor="middle" font-size="10.5" fill="#475569">Enterprise Team  ·  Secure HTTPS  ·  Custom Domain URL</text>
+
+  <!-- Identity & Auth box -->
+  <rect x="730" y="96" width="436" height="76" rx="10" fill="url(#cardGrad)" stroke="#0ea5e9" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="730" y="96" width="436" height="30" rx="10" fill="#e0f2fe" opacity="0.6"/>
+  <text x="750" y="116" font-size="12" font-weight="700" fill="#0369a1">🔐  Identity &amp; Access Control</text>
+  <text x="750" y="133" font-size="10" fill="#0284c7">Single Sign-On (SSO)  ·  Multi-Factor Auth  ·  Role-Based Access  ·  IP Allowlist</text>
+  <text x="750" y="162" font-size="10" fill="#64748b">Team-only access  ·  Session isolation  ·  Audit logging  ·  Zero-trust verification</text>
+
+  <!-- Arrow users → gateway -->
+  <line x1="342" y1="172" x2="342" y2="184" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrW)"/>
+  <line x1="600" y1="172" x2="600" y2="184" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrW)"/>
+
+  <!-- ══════════ GATEWAY STRIP ══════════ -->
+  <rect x="34" y="186" width="1132" height="40" rx="8" fill="url(#cardGrad)" stroke="#0ea5e9" stroke-width="1.8" filter="url(#shadow)"/>
+  <rect x="34" y="186" width="1132" height="20" rx="8" fill="#e0f2fe" opacity="0.5"/>
+  <text x="58" y="211" dominant-baseline="middle" font-size="11" font-weight="700" fill="#0369a1">🌐  Secure Web Gateway  —  Single entry point · No direct access to AI or data</text>
+  <line x1="318" y1="190" x2="318" y2="222" stroke="#bae6fd" stroke-width="1"/>
+  <text x="406" y="207" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#475569">🛡  WAF + DDoS</text>
+  <line x1="494" y1="190" x2="494" y2="222" stroke="#bae6fd" stroke-width="1"/>
+  <text x="582" y="207" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#475569">🔑  SSL / TLS</text>
+  <line x1="670" y1="190" x2="670" y2="222" stroke="#bae6fd" stroke-width="1"/>
+  <text x="758" y="207" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#475569">⚖  Load Balancer</text>
+  <line x1="846" y1="190" x2="846" y2="222" stroke="#bae6fd" stroke-width="1"/>
+  <text x="934" y="207" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#475569">🌍  Custom Domain</text>
+  <line x1="1022" y1="190" x2="1022" y2="222" stroke="#bae6fd" stroke-width="1"/>
+  <text x="1094" y="207" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#64748b">Inbound only</text>
+
+  <!-- Arrow gateway → frontend -->
+  <line x1="600" y1="226" x2="600" y2="238" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <!-- ══════════ WEB FRONTEND ══════════ -->
+  <rect x="356" y="240" width="488" height="76" rx="12" fill="url(#cardGrad)" stroke="#0ea5e9" stroke-width="1.8" filter="url(#shadow)"/>
+  <rect x="356" y="240" width="488" height="32" rx="12" fill="#e0f2fe" opacity="0.55"/>
+  <circle cx="384" cy="256" r="12" fill="#f0f9ff" stroke="#0ea5e9" stroke-width="1.5"/>
+  <text x="384" y="260" text-anchor="middle" font-size="12">⚛</text>
+  <text x="600" y="260" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="#0369a1">Modern Web Interface  (Single-Page App)</text>
+  <text x="600" y="286" text-anchor="middle" font-size="10.5" fill="#0284c7">Conversational Chat UI  ·  Streaming Token Display  ·  Code Viewer  ·  Session History</text>
+  <text x="600" y="302" text-anchor="middle" font-size="10" fill="#64748b">CDN-hosted  ·  Auto-scaled  ·  Auth-gated  ·  Mobile-friendly  ·  ~$0/mo (free tier)</text>
+
+  <!-- Arrow frontend → backend -->
+  <line x1="600" y1="316" x2="600" y2="328" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrB)"/>
+  <rect x="542" y="318" width="116" height="16" rx="8" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1"/>
+  <text x="600" y="329" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="#0369a1">REST API  ·  WebSocket</text>
+
+  <!-- ══════════ BACKEND API ══════════ -->
+  <rect x="34" y="332" width="1132" height="132" rx="12" fill="url(#cardGrad)" stroke="#0ea5e9" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="34" y="332" width="1132" height="34" rx="12" fill="#e0f2fe" opacity="0.55"/>
+  <text x="64" y="352" dominant-baseline="middle" font-size="12.5" font-weight="700" fill="#0369a1">⚡  Backend API  —  Request orchestration layer</text>
+  <text x="870" y="352" dominant-baseline="middle" font-size="10" fill="#64748b">Cloud-native  ·  Auto-scale to zero  ·  Pay-per-use  ·  Multi-tenant</text>
+
+  <!-- 4 API sub-cards -->
+  <rect x="52" y="372" width="254" height="76" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="52" y="372" width="4" height="76" rx="2" fill="#0ea5e9"/>
+  <text x="68" y="390" font-size="11" font-weight="600" fill="#0369a1">🧭  Query Intelligence</text>
+  <text x="68" y="406" font-size="9.5" fill="#475569">Classifies user intent (15+ types)</text>
+  <text x="68" y="420" font-size="9.5" fill="#475569">Routes to AI, RAG, or Search</text>
+  <text x="68" y="434" font-size="9.5" fill="#475569">Maintains conversation context</text>
+
+  <rect x="320" y="372" width="254" height="76" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="320" y="372" width="4" height="76" rx="2" fill="#7c3aed"/>
+  <text x="336" y="390" font-size="11" font-weight="600" fill="#4c1d95">🔎  RAG Pipeline</text>
+  <text x="336" y="406" font-size="9.5" fill="#475569">Load source + semantic vector search</text>
+  <text x="336" y="420" font-size="9.5" fill="#475569">Build prompt with graph context</text>
+  <text x="336" y="434" font-size="9.5" fill="#475569">Multi-query retrieval + re-ranking</text>
+
+  <rect x="588" y="372" width="254" height="76" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="588" y="372" width="4" height="76" rx="2" fill="#0ea5e9"/>
+  <text x="604" y="390" font-size="11" font-weight="600" fill="#0369a1">🔐  Security &amp; Auth</text>
+  <text x="604" y="406" font-size="9.5" fill="#475569">Token validation + RBAC</text>
+  <text x="604" y="420" font-size="9.5" fill="#475569">Per-user data isolation</text>
+  <text x="604" y="434" font-size="9.5" fill="#475569">Audit trail for every query</text>
+
+  <rect x="856" y="372" width="282" height="76" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="856" y="372" width="4" height="76" rx="2" fill="#0ea5e9"/>
+  <text x="872" y="390" font-size="11" font-weight="600" fill="#0369a1">⚡  Streaming Engine</text>
+  <text x="872" y="406" font-size="9.5" fill="#475569">Server-sent events (SSE)</text>
+  <text x="872" y="420" font-size="9.5" fill="#475569">Real-time token-by-token output</text>
+  <text x="872" y="434" font-size="9.5" fill="#475569">Concurrent multi-user sessions</text>
+
+  <!-- Arrows backend → AI services -->
+  <line x1="190" y1="464" x2="190" y2="478" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrW)"/>
+  <line x1="600" y1="464" x2="600" y2="478" stroke="#7c3aed" stroke-width="2" marker-end="url(#arrW)"/>
+  <line x1="1010" y1="464" x2="1010" y2="478" stroke="#0ea5e9" stroke-width="2" marker-end="url(#arrB)"/>
+
+  <!-- ══════════ AI SERVICES ROW ══════════ -->
+
+  <!-- 1. Domain LLM (AMBER) -->
+  <rect x="34" y="480" width="368" height="108" rx="12" fill="url(#llmGrad)" stroke="#f59e0b" stroke-width="2.5" filter="url(#llmShadow)"/>
+  <rect x="34" y="480" width="368" height="36" rx="12" fill="#fef3c7" opacity="0.7"/>
+  <text x="218" y="500" text-anchor="middle" dominant-baseline="middle" font-size="12.5" font-weight="700" fill="#92400e">⭐  Domain Fine-tuned Language Model</text>
+  <rect x="50" y="522" width="220" height="16" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1"/>
+  <text x="160" y="533" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="#92400e">Trained on YOUR legacy codebase</text>
+  <text x="50" y="552" font-size="10" fill="#b45309">Understands domain-specific business logic</text>
+  <text x="50" y="566" font-size="10" fill="#b45309">Private GPU VM  ·  No external AI calls</text>
+
+  <!-- 2. Knowledge Base (VIOLET) -->
+  <rect x="416" y="480" width="368" height="108" rx="12" fill="url(#aiGrad)" stroke="#8b5cf6" stroke-width="2" filter="url(#aiShadow)"/>
+  <rect x="416" y="480" width="368" height="36" rx="12" fill="#ede9fe" opacity="0.7"/>
+  <text x="600" y="500" text-anchor="middle" dominant-baseline="middle" font-size="12.5" font-weight="700" fill="#4c1d95">🔍  Code Knowledge Base</text>
+  <text x="434" y="524" font-size="10" fill="#5b21b6">Vector embeddings of entire codebase</text>
+  <text x="434" y="538" font-size="10" fill="#5b21b6">Semantic search · dependency graph</text>
+  <text x="434" y="552" font-size="10" fill="#5b21b6">Schema definitions · syntax references</text>
+  <text x="434" y="570" font-size="9.5" fill="#64748b">Encrypted · Private endpoint · Auto-updated</text>
+  <rect x="434" y="574" width="332" height="10" rx="5" fill="#ede9fe" opacity="0.8"/>
+  <text x="600" y="582" text-anchor="middle" dominant-baseline="middle" font-size="8.5" fill="#4c1d95">All vectors stay inside private cloud · no API calls</text>
+
+  <!-- 3. Web Intelligence (TEAL) -->
+  <rect x="798" y="480" width="368" height="108" rx="12" fill="url(#cardGrad)" stroke="#06b6d4" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="798" y="480" width="368" height="36" rx="12" fill="#cffafe" opacity="0.6"/>
+  <text x="982" y="500" text-anchor="middle" dominant-baseline="middle" font-size="12.5" font-weight="700" fill="#0e7490">🌐  Live Web Intelligence</text>
+  <text x="816" y="524" font-size="10" fill="#0284c7">Market trends · business news · standards</text>
+  <text x="816" y="538" font-size="10" fill="#0284c7">Anonymous proxy  ·  Query text only</text>
+  <text x="816" y="552" font-size="10" fill="#0284c7">Isolated search subnet  ·  No internal data sent</text>
+  <text x="816" y="570" font-size="9.5" fill="#64748b">Controlled egress  ·  Results return as plain text</text>
+  <rect x="816" y="574" width="332" height="10" rx="5" fill="#cffafe" opacity="0.8"/>
+  <text x="982" y="582" text-anchor="middle" dominant-baseline="middle" font-size="8.5" fill="#0e7490">Only SEARCH QUERY leaves VNet  ·  Code/data stays inside</text>
+
+  <!-- ══════════ AI CAPABILITIES STRIP ══════════ -->
+  <rect x="34" y="596" width="1132" height="36" rx="8" fill="url(#capGrad)" stroke="#e0e7ff" stroke-width="1"/>
+  <text x="600" y="605" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#64748b" font-weight="700" letter-spacing="1">WHAT THE AI CAN DO WITH YOUR LEGACY CODE</text>
+  <!-- 6 capability pills -->
+  <rect x="46"   y="610" width="168" height="16" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="130"  y="621" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#1d4ed8">💬  Explain business logic</text>
+  <rect x="224"  y="610" width="158" height="16" rx="8" fill="#faf5ff" stroke="#ddd6fe" stroke-width="1"/>
+  <text x="303"  y="621" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#4c1d95">🔍  Cross-program impact</text>
+  <rect x="392"  y="610" width="158" height="16" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="471"  y="621" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#1d4ed8">📝  Auto-documentation</text>
+  <rect x="560"  y="610" width="160" height="16" rx="8" fill="#faf5ff" stroke="#ddd6fe" stroke-width="1"/>
+  <text x="640"  y="621" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#4c1d95">♻️  Modernisation advice</text>
+  <rect x="730"  y="610" width="152" height="16" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="806"  y="621" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#1d4ed8">🐛  Debug &amp; trace logic</text>
+  <rect x="892"  y="610" width="158" height="16" rx="8" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/>
+  <text x="971"  y="621" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#065f46">📊  Extract business rules</text>
+
+  <!-- ══════════ STORAGE + INTEGRATIONS ══════════ -->
+  <!-- Integrations row -->
+  <rect x="34" y="638" width="540" height="52" rx="9" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="54" y="658" font-size="11" font-weight="600" fill="#334155">🔌  Enterprise Integrations</text>
+  <text x="54" y="674" font-size="10" fill="#475569">🎫  Ticketing System  ·  📋  Knowledge Wiki  ·  🐙  Version Control  ·  📦  CI/CD Pipeline</text>
+  <text x="54" y="686" font-size="9.5" fill="#94a3b8">Read-only API tokens  ·  Org-specific endpoints  ·  No external data sharing</text>
+
+  <!-- Storage row -->
+  <rect x="586" y="638" width="580" height="52" rx="9" fill="url(#storeGrad)" stroke="#7dd3fc" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="606" y="658" font-size="11" font-weight="600" fill="#0369a1">☁  Private Knowledge Store  (Encrypted · No public endpoint)</text>
+  <text x="606" y="674" font-size="10" fill="#0284c7">📁 Legacy Source Files  ·  📄 Schema Definitions  ·  📖 Syntax References  ·  🧠 Embeddings  ·  🔗 Dep. Graph</text>
+  <text x="606" y="686" font-size="9.5" fill="#64748b">Auto-synced on every commit  ·  RAG index rebuilt automatically  ·  Private blob storage</text>
+
+  <!-- ══════════ DARK FOOTER ══════════ -->
+  <rect x="0" y="636" width="1200" height="4" fill="url(#accentLine)" opacity="0.5"/>
+  <rect x="0" y="640" width="1200" height="150" fill="url(#footerGrad)"/>
+  <rect x="0" y="640" width="1200" height="4" fill="url(#accentLine)"/>
+
+  <!-- Tech stack badges -->
+  <text x="34" y="663" font-size="8.5" fill="#475569" font-weight="700" letter-spacing="2">TECHNOLOGY STACK</text>
+
+  <rect x="34"   y="670" width="64"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="66"   y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🐍 Python</text>
+  <rect x="106"  y="670" width="76"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="144"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">⚡ FastAPI</text>
+  <rect x="190"  y="670" width="68"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="224"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">⚛ React</text>
+  <rect x="266"  y="670" width="84"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="308"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🦜 LangChain</text>
+  <rect x="358"  y="670" width="82"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="399"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🔮 ChromaDB</text>
+  <rect x="448"  y="670" width="64"  height="22" rx="11" fill="#0c2a45" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="480"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#38bdf8">☁ Azure</text>
+  <rect x="520"  y="670" width="80"  height="22" rx="11" fill="#0c2a45" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="560"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#38bdf8">🔐 Azure AD</text>
+  <rect x="608"  y="670" width="100" height="22" rx="11" fill="#0c2a45" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="658"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#38bdf8">🌐 Front Door</text>
+  <rect x="716"  y="670" width="104" height="22" rx="11" fill="#1a0c00" stroke="#92400e" stroke-width="1"/>
+  <text x="768"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#fcd34d">⭐ Fine-tuned LLM</text>
+  <rect x="828"  y="670" width="88"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="872"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🔍 Vector RAG</text>
+  <rect x="924"  y="670" width="84"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="966"  y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🌐 Web Search</text>
+  <rect x="1016" y="670" width="78"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="1055" y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🐳 Docker</text>
+  <rect x="1102" y="670" width="80"  height="22" rx="11" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="1142" y="684" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#94a3b8">🔗 REST API</text>
+
+  <!-- Key principles row -->
+  <text x="34" y="710" font-size="8.5" fill="#475569" font-weight="700" letter-spacing="2">SECURITY PRINCIPLES</text>
+  <text x="34" y="726" font-size="11" fill="#38bdf8">
+    ✅ Your model, your GPU, your VNet  ·  🔒 All data encrypted at rest + in transit  ·  🔐 Zero-trust auth on every request
+  </text>
+  <text x="34" y="744" font-size="10.5" fill="#475569">
+    Fine-tuned LLM runs on private GPU VM  ·  Embeddings computed internally  ·  Web search is query-only (no internal data leaves)  ·  NSG rules block all unintended egress
+  </text>
+
+  <!-- Tagline -->
+  <text x="600" y="768" text-anchor="middle" font-size="12" fill="#64748b">
+    #EnterpriseAI  #LegacyModernization  #PrivateCloud  #RAG  #FineTuning  #ZeroTrust  #PythonAI  #FastAPI  #React  #Azure  #LLM  #CloudArchitecture
+  </text>
+</svg>

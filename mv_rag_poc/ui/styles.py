@@ -671,6 +671,7 @@ pre code {
 
 /* ── SIDEBAR HIDDEN ── */
 section[data-testid="stSidebar"].mv-hidden { display: none !important; }
+
 </style>
 """
 

@@ -109,7 +109,7 @@ def _render_meta(q_type: str, elapsed: str = ""):
 
 
 # ── Data expanders ────────────────────────────────────────────────────────────
-def render_jira(data: dict):
+def render_jira(data: dict, expanded: bool = False):
     sprint_name = data.get("sprint_name", "")
     tickets = (
         data.get("tickets")               or
@@ -124,7 +124,7 @@ def render_jira(data: dict):
     if not tickets:
         return
     label = f"🎫  {sprint_name} — {len(tickets)} ticket(s)" if sprint_name else f"🎫  Jira — {len(tickets)} ticket(s)"
-    with st.expander(label):
+    with st.expander(label, expanded=expanded):
         for t in tickets[:10]:
             key      = t.get("key", "—")
             url      = t.get("url", "")
@@ -257,15 +257,22 @@ def render_message(msg: dict):
     _render_meta(q_type, elapsed)
     if q_type == "code_suggestion":
         render_code_suggestion_banner()
-    st.markdown(msg["content"])
+    if q_type == "unibasic_general":
+        st.code(msg["content"], language=None)
+    else:
+        st.markdown(msg["content"])
     if q_type == "confluence":
         render_confluence(msg.get("confluence_data") or {})
     elif q_type == "jira":
         render_confluence(msg.get("confluence_data") or {})
-        render_jira(msg.get("jira_data") or {})
+        render_jira(msg.get("jira_data") or {}, expanded=True)
     elif q_type == "history":
         render_git(msg.get("git_data") or {})
     elif q_type in ("subroutine", "dict"):
+        render_impact(msg.get("impact") or {})
+        render_sources(msg.get("sources") or [])
+    elif q_type == "impact_analysis":
+        render_jira(msg.get("jira_data") or {}, expanded=True)
         render_impact(msg.get("impact") or {})
         render_sources(msg.get("sources") or [])
     elif q_type == "code_suggestion":

@@ -80,11 +80,12 @@ if not st.session_state["messages"] and not st.session_state.sv_active:
     render_welcome()
 
 render_chat_history()
-render_stream_handler(LLM_MODEL)
 
 # ── Chat input ────────────────────────────────────────────────────────────────
 prefill  = st.session_state.pop("prefill_question", None)
 question = st.chat_input("Ask about your MV codebase, Jira, GitHub or Confluence…") or prefill
+
+render_stream_handler(LLM_MODEL)
 
 if question and not st.session_state.sv_active:
     handle_question(question, engine, subroutine)
